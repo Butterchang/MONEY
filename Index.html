@@ -1,0 +1,943 @@
+<title>まめクエスト 直前ダッシュ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;800&family=Noto+Sans+TC:wght@500;700&display=swap">
+<style>
+/* Layout: phone-first game shell — top status bar, zigzag unit path, full-screen lesson with bottom feedback sheet */
+:root{
+  --bg:#fbf7ee; --card:#ffffff; --ink:#2b2924; --muted:#7c766a; --line:#e7e0d1;
+  --green:#2f9e63; --green-d:#1f7448; --green-s:#dcf3e5;
+  --red:#e0564b; --red-d:#b23d33; --red-s:#fde4e1;
+  --gold:#f0a92b; --blue:#3b8fd6; --brown:#7a4b2a;
+  --f:"M PLUS Rounded 1c","Noto Sans TC","Hiragino Maru Gothic ProN","PingFang TC",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#17150f; --card:#232019; --ink:#f2ede1; --muted:#a8a192; --line:#3b362b;
+  --green:#4cb97c; --green-d:#2c7f52; --green-s:#1f3a2a; --red:#f07b70; --red-d:#b34d43; --red-s:#3e2420;
+  --gold:#f3b443; --blue:#5aa5e6; --brown:#c48a5c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#17150f; --card:#232019; --ink:#f2ede1; --muted:#a8a192; --line:#3b362b;
+  --green:#4cb97c; --green-d:#2c7f52; --green-s:#1f3a2a; --red:#f07b70; --red-d:#b34d43; --red-s:#3e2420;
+  --gold:#f3b443; --blue:#5aa5e6; --brown:#c48a5c; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f);font-size:16px;line-height:1.6;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.app{max-width:560px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;padding-inline:16px}
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding-block:12px;border-bottom:2px solid var(--line)}
+.stat{display:flex;align-items:center;gap:4px;font-weight:800;font-size:15px;font-variant-numeric:tabular-nums}
+.stat svg{width:24px;height:24px}
+.grow{flex:1}
+.seg{display:flex;border:2px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{border:0;background:var(--card);color:var(--muted);font-weight:800;font-size:13px;padding:6px 10px}
+.seg button[aria-pressed="true"]{background:var(--green);color:#fff}
+.iconbtn{border:2px solid var(--line);background:var(--card);border-radius:12px;width:36px;height:34px;display:grid;place-items:center;color:var(--muted)}
+.iconbtn svg{width:18px;height:18px}
+/* home */
+.hello{display:flex;gap:14px;align-items:center;padding-block:20px 6px}
+.hello svg{width:76px;height:76px;flex:none}
+.bubble{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:10px 14px;font-weight:500;position:relative}
+.bubble b{color:var(--green)}
+.path{display:flex;flex-direction:column;align-items:center;gap:6px;padding-block:18px 60px}
+.unitrow{width:100%;display:flex;align-items:center;gap:14px}
+.node{width:76px;height:72px;border-radius:50%;border:0;display:grid;place-items:center;position:relative;flex:none;color:#fff;
+  box-shadow:0 6px 0 rgba(0,0,0,.18);transition:transform .08s}
+.node:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.18)}
+.node svg.ic{width:40px;height:40px}
+.ring{position:absolute;inset:-7px;pointer-events:none}
+.unitlabel{min-width:0;flex:1}
+.unitlabel .t{font-weight:800;font-size:16px;line-height:1.3}
+.unitlabel .s{font-size:13px;color:var(--muted)}
+.crowns{display:flex;gap:2px;margin-top:3px}
+.crowns i{width:14px;height:6px;border-radius:3px;background:var(--line)}
+.crowns i.on{background:var(--gold)}
+.next{position:absolute;top:-30px;left:50%;transform:translateX(-50%);background:var(--card);border:2px solid var(--line);color:var(--green);font-weight:800;font-size:12px;padding:2px 8px;border-radius:10px;white-space:nowrap;animation:bob 1.6s ease-in-out infinite}
+@keyframes bob{50%{transform:translate(-50%,-4px)}}
+.connector{width:6px;height:18px;border-radius:3px;background:var(--line)}
+/* lesson */
+.lesson{display:flex;flex-direction:column;min-height:100%;padding-bottom:0}
+.lhead{display:flex;align-items:center;gap:12px;padding-block:14px}
+.close{border:0;background:none;color:var(--muted);width:32px;height:32px;display:grid;place-items:center}
+.close svg{width:22px;height:22px}
+.pbar{flex:1;height:16px;background:var(--line);border-radius:8px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--green);border-radius:8px;transition:width .35s;position:relative}
+.pbar i::after{content:"";position:absolute;left:8px;right:8px;top:4px;height:4px;border-radius:2px;background:rgba(255,255,255,.35)}
+.qwrap{flex:1;padding-block:8px 180px;display:flex;flex-direction:column;gap:16px}
+.qtype{font-size:13px;font-weight:800;color:var(--blue);letter-spacing:.04em}
+.qtext{font-size:21px;font-weight:800;line-height:1.45;text-wrap:balance}
+.qrow{display:flex;gap:12px;align-items:flex-start}
+.qrow > svg.mascot{width:64px;height:64px;flex:none}
+.qimg{display:flex;justify-content:center}
+.qimg svg{max-width:100%;height:auto}
+.opts{display:grid;gap:10px}
+.opts.two{grid-template-columns:1fr 1fr}
+.opt{background:var(--card);color:var(--ink);border:2px solid var(--line);border-bottom-width:5px;border-radius:14px;padding:12px 14px;font-size:16px;font-weight:500;text-align:left;display:flex;gap:10px;align-items:center;min-height:54px}
+.opt .k{flex:none;width:26px;height:26px;border:2px solid var(--line);border-radius:8px;display:grid;place-items:center;font-size:12px;color:var(--muted);font-weight:800}
+.opt[aria-pressed="true"]{border-color:var(--blue);background:color-mix(in srgb,var(--blue) 12%,var(--card));color:var(--ink)}
+.opt[aria-pressed="true"] .k{border-color:var(--blue);color:var(--blue)}
+.opt.big{justify-content:center;font-size:22px;font-weight:800;min-height:84px}
+.opt.ok{border-color:var(--green);background:var(--green-s)}
+.opt.ng{border-color:var(--red);background:var(--red-s)}
+.opt:disabled{cursor:default}
+.opt.gone{opacity:.35}
+.hint{font-size:13px;color:var(--muted);font-weight:500}
+/* fill */
+.sentence{background:var(--card);border:2px solid var(--line);border-radius:14px;padding:14px;font-size:17px;line-height:2.2}
+.blank{display:inline-block;min-width:72px;border-bottom:3px solid var(--muted);margin:0 3px;text-align:center;vertical-align:bottom;line-height:1.6}
+.blank button{border:2px solid var(--line);border-bottom-width:4px;background:var(--card);color:var(--ink);border-radius:10px;padding:1px 10px;font-size:16px;font-weight:500}
+.bank{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{border:2px solid var(--line);border-bottom-width:4px;background:var(--card);color:var(--ink);border-radius:12px;padding:8px 14px;font-size:16px;font-weight:500}
+.chip:disabled{visibility:hidden}
+/* match */
+.match{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.match .col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.match .opt{min-height:58px;justify-content:center;text-align:center;font-size:15px;padding:8px}
+.match .opt.flash{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* bottom sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:10;border-top:2px solid var(--line);background:var(--bg);padding:14px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.sheet .in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+.sheet.ok{background:var(--green-s);border-color:transparent}
+.sheet.ng{background:var(--red-s);border-color:transparent}
+.verdict{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:800}
+.sheet.ok .verdict{color:var(--green-d)}
+.sheet.ng .verdict{color:var(--red-d)}
+:root[data-theme="dark"] .sheet.ok .verdict{color:var(--green)}
+:root[data-theme="dark"] .sheet.ng .verdict{color:var(--red)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .sheet.ok .verdict{color:var(--green)} :root:not([data-theme="light"]) .sheet.ng .verdict{color:var(--red)}}
+.verdict svg{width:34px;height:34px}
+.exp{font-size:14px;font-weight:500;color:var(--ink)}
+.exp b{font-weight:800}
+.cta{width:100%;border:0;border-radius:16px;padding:14px;font-size:17px;font-weight:800;letter-spacing:.04em;color:#fff;background:var(--green);box-shadow:0 5px 0 var(--green-d);text-transform:uppercase}
+.cta:active{transform:translateY(3px);box-shadow:0 2px 0 var(--green-d)}
+.cta.ng{background:var(--red);box-shadow:0 5px 0 var(--red-d)}
+.cta:disabled{background:var(--line);color:var(--muted);box-shadow:0 5px 0 color-mix(in srgb,var(--line) 70%,#000 10%);cursor:default}
+.ghost{background:none;border:0;color:var(--muted);font-weight:800;font-size:14px;padding:8px}
+/* end screens */
+.end{display:flex;flex-direction:column;align-items:center;text-align:center;gap:14px;padding-block:40px 30px;flex:1}
+.end svg.mascot{width:140px;height:140px}
+.end h2{margin:0;font-size:26px;font-weight:800;color:var(--gold)}
+.end p{margin:0;color:var(--muted)}
+.tiles{display:flex;gap:10px;width:100%;justify-content:center;flex-wrap:wrap}
+.tile{border:2px solid;border-radius:14px;min-width:120px;overflow:hidden}
+.tile .h{color:#fff;font-size:12px;font-weight:800;padding:3px 0}
+.tile .v{font-size:22px;font-weight:800;padding:8px;font-variant-numeric:tabular-nums;background:var(--card)}
+.endbtns{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:auto}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:grid;place-items:end center;z-index:20}
+.modal .box{background:var(--card);width:100%;max-width:560px;border-radius:20px 20px 0 0;padding:22px 16px calc(20px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:10px;text-align:center}
+.modal h3{margin:0;font-size:20px}
+.modal p{margin:0 0 6px;color:var(--muted)}
+.foot{font-size:12px;color:var(--muted);text-align:center;padding-bottom:24px}
+.nbhead{display:flex;align-items:center;gap:10px;padding-block:14px}
+.nbhead h2{margin:0;font-size:22px;font-weight:800;flex:1}
+.nbsum{font-size:14px;color:var(--muted);font-weight:500;margin-bottom:10px}
+.tabs{display:flex;gap:6px;background:var(--line);padding:4px;border-radius:14px}
+.tabs button{flex:1;border:0;border-radius:10px;padding:8px 4px;font-weight:800;font-size:14px;background:none;color:var(--muted)}
+.tabs button[aria-pressed="true"]{background:var(--card);color:var(--ink)}
+.uchips{display:flex;gap:6px;overflow-x:auto;padding-block:10px}
+.uchips button{flex:none;border:2px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:4px 12px;font-size:13px;font-weight:500}
+.uchips button[aria-pressed="true"]{border-color:var(--green);color:var(--green);font-weight:800}
+.nblist{display:flex;flex-direction:column;gap:10px;padding-block:6px 40px}
+.nbcard{background:var(--card);border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.nbcard.fixed{border-style:dashed}
+.nbmeta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--muted);font-weight:500}
+.upill{color:#fff;font-weight:800;border-radius:999px;padding:1px 9px}
+.cnt{color:var(--red);font-weight:800}
+.okb{color:var(--green);font-weight:800}
+.nbq{font-weight:800;font-size:16px;line-height:1.5}
+.nbimg svg{max-width:170px;height:auto}
+.nba{font-size:14px;background:var(--green-s);border-radius:10px;padding:8px 10px;overflow-wrap:anywhere}
+.nbex{font-size:13px;color:var(--muted)}
+.nbcard .ghost{align-self:flex-end;padding:2px 4px;font-size:13px}
+.nbempty{text-align:center;color:var(--muted);padding-block:30px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.nbempty svg{width:90px;height:90px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="app" id="app"></div>
+
+<script>
+/* ============ i18n ============ */
+const UI={
+ ja:{check:"チェック",cont:"つづける",ok:["すばらしい！","その調子！","完璧！","いいね！","さすが！"],ng:"おしい！",ngSub:"あとでもう一回出るよ。",ans:"正解：",selectAll:"あてはまるものを全て選んでね",match:"ペアを組み合わせよう",fill:"空欄に入る言葉を選ぼう",tf:"正しい？まちがい？",T:"正しい",F:"まちがい",mc:"正しいものを選ぼう",review:"まちがいノート",reviewSub:n=>`${n} 問たまっています`,reviewEmpty:"まだありません",done:"レッスンクリア！",perfect:"パーフェクト！",xp:"獲得 XP",acc:"正答率",time:"タイム",home:"ホームへ",again:"もう一回",out:"ハートがなくなったよ",outSub:"大丈夫。まちがえた問題はノートに入れておいたよ。",quit:"レッスンをやめる？",quitSub:"今やめると、このレッスンの進み具合は消えます。",keep:"つづける",leave:"やめる",next:"次はここ",greet:n=>`本番まであと少し！<b>Day 1 から1日1レッスン</b>、最後はまちがいノートで仕上げよう。${n?`（${n} 日連続）`:""}`,lv:"Lv",foot:"直前ダッシュ版：受験した先輩の情報（エスプレッソ・プロモ豆・倫理的な調達・コア豆）をもとに FY27 電車版から出題。記録はこの端末だけに保存されます。",reset:"記録をリセット",resetQ:"すべての記録を消しますか？",yes:"消す",no:"やめておく",skipMatch:"ペアがすべてそろったよ",nbAll:"すべて",nbTabs:["要復習","克服済み","すべて"],nbStart:n=>`要復習の問題を解く（${n} 問）`,nbEmpty:"まだまちがえた問題はありません。この調子！",nbNone:"この条件の問題はありません",nbTimes:n=>`${n} 回まちがい`,nbLast:"最後：",nbFixed:"克服",nbRemove:"ノートから消す",nbBack:"もどる",nbSum:(a,b)=>`要復習 ${a} 問・克服済み ${b} 問。克服した問題も記録に残ります。`},
+ zh:{check:"檢查",cont:"繼續",ok:["太棒了！","就是這樣！","完美！","答對了！","厲害！"],ng:"差一點！",ngSub:"沒關係，等一下會再出一次。",ans:"正解：",selectAll:"選出所有正確的選項",match:"把配對連起來",fill:"選出填入空格的詞",tf:"對還是錯？",T:"正確",F:"錯誤",mc:"選出正確答案",review:"錯題本",reviewSub:n=>`累積 ${n} 題`,reviewEmpty:"目前沒有",done:"闖關成功！",perfect:"全對！",xp:"獲得 XP",acc:"正確率",time:"時間",home:"回首頁",again:"再玩一次",out:"愛心用完了",outSub:"沒關係，答錯的題目已經幫你放進錯題本了。",quit:"要離開這一關嗎？",quitSub:"現在離開的話，這一關的進度不會保留。",keep:"繼續作答",leave:"離開",next:"從這裡開始",greet:n=>`最後衝刺！<b>從 Day 1 開始一天一關</b>，最後用錯題本收尾。${n?`（已連續 ${n} 天）`:""}`,lv:"Lv",foot:"衝刺版：依考過的前輩情報（濃縮咖啡・プロモ豆・道德採購・コア豆）從 FY27 電車版出題。紀錄只存在這台裝置。",reset:"清除紀錄",resetQ:"要清除所有紀錄嗎？",yes:"清除",no:"取消",skipMatch:"全部配對完成",nbAll:"全部",nbTabs:["待複習","已掌握","全部"],nbStart:n=>`開始複習（${n} 題）`,nbEmpty:"還沒有答錯的題目，繼續保持！",nbNone:"這個條件下沒有題目",nbTimes:n=>`答錯 ${n} 次`,nbLast:"最近：",nbFixed:"已掌握",nbRemove:"從錯題本移除",nbBack:"返回",nbSum:(a,b)=>`待複習 ${a} 題・已掌握 ${b} 題。答對後題目會移到「已掌握」，紀錄會保留。`}
+};
+const B=(ja,zh)=>({ja,zh:zh??ja});
+const L=x=>x==null?"":typeof x==="string"?x:x[S.lang]??x.ja;
+
+/* ============ storage ============ */
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const S={lang:"ja",sound:store.get("bqs_sound",true),xp:store.get("bqs_xp",0),crowns:store.get("bqs_crowns",{}),miss:store.get("bqs_miss",[]),missLog:store.get("bqs_misslog",{}),days:store.get("bqs_days",[])};
+function save(){store.set("bqs_lang",S.lang);store.set("bqs_sound",S.sound);store.set("bqs_xp",S.xp);store.set("bqs_crowns",S.crowns);store.set("bqs_miss",S.miss);store.set("bqs_days",S.days);store.set("bqs_misslog",S.missLog)}
+function today(){const d=new Date();return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")}
+function streak(){const set=new Set(S.days);let n=0;const d=new Date();if(!set.has(today()))d.setDate(d.getDate()-1);for(;;){const k=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");if(set.has(k)){n++;d.setDate(d.getDate()-1)}else break}return n}
+
+/* ============ sound ============ */
+let AC=null;
+function beep(ok){if(!S.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime;const notes=ok?[660,880]:[300,220];notes.forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ok?"sine":"triangle";o.frequency.value=f;g.gain.setValueAtTime(.0001,t+i*.11);g.gain.exponentialRampToValueAtTime(.18,t+i*.11+.02);g.gain.exponentialRampToValueAtTime(.0001,t+i*.11+.2);o.connect(g).connect(AC.destination);o.start(t+i*.11);o.stop(t+i*.11+.22)})}catch(e){}}
+
+/* ============ art ============ */
+function mascot(mood="happy"){
+ const mouth=mood==="happy"?'<path d="M40 63q10 9 20 0" stroke="#2b1a10" stroke-width="3.5" fill="none" stroke-linecap="round"/>':mood==="sad"?'<path d="M41 67q9-7 18 0" stroke="#2b1a10" stroke-width="3.5" fill="none" stroke-linecap="round"/>':'<path d="M42 64h16" stroke="#2b1a10" stroke-width="3.5" stroke-linecap="round"/>';
+ const cheeks=mood==="happy"?'<ellipse cx="31" cy="58" rx="5" ry="3" fill="#e9877a" opacity=".7"/><ellipse cx="69" cy="58" rx="5" ry="3" fill="#e9877a" opacity=".7"/>':"";
+ const tear=mood==="sad"?'<path d="M67 52q3 6 0 9q-3-3 0-9z" fill="#7cc4f2"/>':"";
+ return `<svg class="mascot" viewBox="0 0 100 100" aria-hidden="true"><ellipse cx="50" cy="94" rx="26" ry="4" fill="#000" opacity=".12"/><ellipse cx="50" cy="52" rx="33" ry="40" fill="#8a552f"/><ellipse cx="44" cy="40" rx="20" ry="26" fill="#a26a3f" opacity=".55"/><path d="M50 14c-12 18 12 46-2 76" stroke="#5e3519" stroke-width="3" fill="none" opacity=".45"/><path d="M26 70q24 10 48 0v14q-24 10-48 0z" fill="#2f9e63"/><circle cx="50" cy="79" r="3" fill="#fff" opacity=".8"/><circle cx="38" cy="46" r="8" fill="#fff"/><circle cx="62" cy="46" r="8" fill="#fff"/><circle cx="${mood==="sad"?38:39.5}" cy="${mood==="sad"?48:46}" r="4" fill="#2b1a10"/><circle cx="${mood==="sad"?62:63.5}" cy="${mood==="sad"?48:46}" r="4" fill="#2b1a10"/>${cheeks}${tear}${mouth}</svg>`;
+}
+const ICON={
+ bag:'<path d="M12 13h16l2 21H10z" fill="#fff"/><path d="M12 13l3-5h10l3 5" fill="#fff"/><rect x="14" y="20" width="12" height="7" rx="1.5" fill="currentColor"/>',
+ tag:'<path d="M7 20L19 8h13v13L20 33z" fill="#fff"/><circle cx="26" cy="14" r="3" fill="currentColor"/>',
+ bean:'<ellipse cx="20" cy="20" rx="10.5" ry="14" fill="#fff"/><path d="M20 7c-5 7 5 19 0 26" stroke="currentColor" stroke-width="2.6" fill="none"/>',
+ star:'<path d="M20 5l4.4 9.2 10 1.2-7.4 7 2 9.9L20 27.4l-9 4.9 2-9.9-7.4-7 10-1.2z" fill="#fff"/>',
+ heart:'<path d="M20 33S8 25.5 8 17.5A6.5 6.5 0 0 1 20 14a6.5 6.5 0 0 1 12 3.5C32 25.5 20 33 20 33z" fill="#fff"/>',
+ pin:'<path d="M20 35S9.5 24.5 9.5 17a10.5 10.5 0 0 1 21 0C30.5 24.5 20 35 20 35z" fill="#fff"/><circle cx="20" cy="17" r="4.2" fill="currentColor"/>',
+ mountain:'<path d="M5 32l11-17 6.5 9.5 4-5.5L35 32z" fill="#fff"/><path d="M16 15l3 4.5h-6z" fill="currentColor" opacity=".5"/>',
+ shield:'<path d="M20 5l12.5 5v9c0 8.5-6 13.5-12.5 15.5C13.5 32.5 7.5 27.5 7.5 19v-9z" fill="#fff"/><path d="M14.5 20l4 4 7.5-8.5" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+ cherry:'<circle cx="20" cy="23" r="11.5" fill="#fff"/><circle cx="20" cy="23" r="6" fill="currentColor"/><path d="M20 11.5c0-4.5 3.5-7 7.5-7" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round"/>',
+ press:'<rect x="12" y="12" width="16" height="22" rx="2.5" fill="#fff"/><rect x="18" y="5" width="4" height="9" rx="1" fill="#fff"/><rect x="12" y="19" width="16" height="3" fill="currentColor"/><path d="M28 16h3v12h-3" stroke="#fff" stroke-width="2.5" fill="none"/>',
+ clock:'<circle cx="20" cy="20" r="13.5" fill="#fff"/><path d="M20 12v8.5l6 3.5" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round"/>',
+ leaf:'<path d="M9 31C9 15.5 19.5 8 32 8c0 14.5-8.5 23-23 23z" fill="#fff"/><path d="M9 31L24 16" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+ trophy:'<path d="M12.5 7h15v9a7.5 7.5 0 0 1-15 0z" fill="#fff"/><path d="M12.5 10H8v3a5 5 0 0 0 5 5M27.5 10H32v3a5 5 0 0 1-5 5" stroke="#fff" stroke-width="2.4" fill="none"/><rect x="18" y="22" width="4" height="6" fill="#fff"/><rect x="12.5" y="28" width="15" height="4.5" rx="1.5" fill="#fff"/>',
+ cup:'<path d="M9 13h19v9a8 8 0 0 1-8 8h-3a8 8 0 0 1-8-8z" fill="#fff"/><path d="M28 15h2.5a3.5 3.5 0 0 1 0 7H28" stroke="#fff" stroke-width="2.6" fill="none"/><path d="M14 5c-2 3 2 4 0 7M20 5c-2 3 2 4 0 7" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/>',
+ bolt:'<path d="M23 4L9 23h9l-3 13 15-20h-9z" fill="#fff"/>',
+ book:'<path d="M7 9h10.5c2.5 0 2.5 2.5 2.5 2.5V33s0-2.5-2.5-2.5H7zM33 9H22.5C20 9 20 11.5 20 11.5V33s0-2.5 2.5-2.5H33z" fill="#fff"/>'
+};
+const icon=(k)=>`<svg class="ic" viewBox="0 0 40 40" aria-hidden="true">${ICON[k]}</svg>`;
+const svgI={
+ fire:'<svg viewBox="0 0 24 24"><path d="M12 2c1 4 6 6 6 12a6 6 0 0 1-12 0c0-3 1.5-4.5 3-6 0 2 1 3 2 3-1-3 0-6 1-9z" fill="#f0a92b"/><path d="M12 13c.5 2 3 3 3 5.2a3 3 0 0 1-6 0c0-1.7 1.4-2.5 2-3.2 0 .9.5 1.5 1 1.5-.4-1.4-.4-2.4 0-3.5z" fill="#ffd56b"/></svg>',
+ gem:'<svg viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z" fill="#3b8fd6"/><path d="M2 9h20L12 21z" fill="#2a6faa"/><path d="M8 3l-2 6h12l-2-6" fill="#7fbcf0"/></svg>',
+ heart:'<svg viewBox="0 0 24 24"><path d="M12 21S2.5 15 2.5 8.5A5 5 0 0 1 12 6a5 5 0 0 1 9.5 2.5C21.5 15 12 21 12 21z" fill="#e0564b"/><ellipse cx="8" cy="8.5" rx="2" ry="1.4" fill="#fff" opacity=".5"/></svg>',
+ nb:'<svg viewBox="0 0 24 24"><path d="M3 5h7c1.5 0 2 1 2 2v13s-.5-1.5-2-1.5H3zM21 5h-7c-1.5 0-2 1-2 2v13s.5-1.5 2-1.5h7z" fill="currentColor"/></svg>',
+ x:'<svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>',
+ sound:'<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>',
+ mute:'<svg viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+ okc:'<svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#fff"/><path d="M10 17.5l5 5 9-10" stroke="#2f9e63" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+ ngc:'<svg viewBox="0 0 34 34"><circle cx="17" cy="17" r="16" fill="#fff"/><path d="M11.5 11.5l11 11M22.5 11.5l-11 11" stroke="#e0564b" stroke-width="4" stroke-linecap="round"/></svg>'
+};
+const ROAST={BLONDE:"#d9a45c",MEDIUM:"#8b5a2b",DARK:"#3c2314",X:"#b9b2a4"};
+function bagArt(code,roast,label){
+ const c=ROAST[roast]||ROAST.X, beans=roast==="BLONDE"?1:roast==="MEDIUM"?2:roast==="DARK"?3:0;
+ let dots="";for(let i=0;i<3;i++){dots+=`<ellipse cx="${78+i*22}" cy="168" rx="7" ry="9.5" fill="${i<beans?c:"none"}" stroke="${roast==="X"?"#9a9385":c}" stroke-width="2"/>`}
+ return `<svg viewBox="0 0 200 200" width="190" aria-label="coffee bag ${code}"><ellipse cx="100" cy="190" rx="62" ry="6" fill="#000" opacity=".1"/><path d="M48 46h104l10 140H38z" fill="${roast==="X"?"#d8d2c4":c}"/><path d="M48 46l12-26h80l12 26z" fill="${roast==="X"?"#c9c2b2":c}" opacity=".85"/><path d="M60 20h80" stroke="#000" opacity=".15" stroke-width="3"/><rect x="58" y="70" width="84" height="66" rx="8" fill="#fbf7ee"/><text x="100" y="104" text-anchor="middle" font-family="M PLUS Rounded 1c,sans-serif" font-weight="800" font-size="30" fill="#2b2924">${code}</text><text x="100" y="126" text-anchor="middle" font-family="M PLUS Rounded 1c,sans-serif" font-weight="800" font-size="12" fill="#7c766a">${label||(roast==="X"?"? ROAST":roast)}</text>${dots}</svg>`;
+}
+const CH_LAYERS=[["果皮","#c8352e"],["果肉","#f08a7e"],["ミューシレージ","#f6d58a"],["パーチメント","#e9dcc0"],["シルバースキン","#f7f4ec"],["生豆","#9cc38a"]];
+function cherryArt(hi){
+ const R=[88,74,62,52,45,38];let s="";
+ CH_LAYERS.forEach((l,i)=>{s+=`<ellipse cx="110" cy="110" rx="${R[i]}" ry="${R[i]*0.94}" fill="${l[1]}" ${i===hi?'stroke="#3b8fd6" stroke-width="5"':'stroke="#000" stroke-opacity=".12" stroke-width="1.5"'}/>`});
+ s+=`<path d="M110 76q-14 34 0 68" stroke="#5f8a4c" stroke-width="3" fill="none"/>`;
+ const lx=[204,204,204,204,204,204],ly=[30,62,94,126,158,190];
+ CH_LAYERS.forEach((l,i)=>{const r=(R[i]+(R[i+1]||0))/2;const ang=-0.9+i*0.36;const px=110+r*Math.cos(ang),py=110+r*0.94*Math.sin(ang);
+  s+=`<line x1="${px}" y1="${py}" x2="${lx[i]}" y2="${ly[i]}" stroke="${i===hi?"#3b8fd6":"#8b8476"}" stroke-width="${i===hi?3:1.5}"/><circle cx="${lx[i]+12}" cy="${ly[i]}" r="11" fill="${i===hi?"#3b8fd6":"#fff"}" stroke="${i===hi?"#3b8fd6":"#8b8476"}" stroke-width="2"/><text x="${lx[i]+12}" y="${ly[i]+4.5}" text-anchor="middle" font-family="M PLUS Rounded 1c,sans-serif" font-weight="800" font-size="13" fill="${i===hi?"#fff":"#2b2924"}">${i+1}</text>`});
+ s+=`<path d="M110 22q4-14 18-18" stroke="#5f8a4c" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+ return `<svg viewBox="0 0 240 220" width="260" aria-label="coffee cherry cross section">${s}</svg>`;
+}
+function grindArt(n){
+ const r=1.2+n*0.55;let s="";const step=Math.max(r*2.6,7);let k=0;
+ for(let y=12;y<108;y+=step)for(let x=12;x<228;x+=step){k++;const j=((k*37)%7)/7*r*.6;s+=`<circle cx="${x+j}" cy="${y+((k*53)%5)/5*r*.5}" r="${r*(0.8+((k*17)%5)/12)}" fill="#6b4226" opacity="${0.75+((k*11)%4)/16}"/>`}
+ return `<svg viewBox="0 0 240 120" width="260" aria-label="grind size"><rect width="240" height="120" rx="14" fill="#f3ead8"/>${s}</svg>`;
+}
+function cupsArt(hi){
+ const sizes=[["Demi",26],["Short",36],["Tall",44],["Grande",52],["Venti",60]];let x=12,s="";
+ sizes.forEach((c,i)=>{const h=c[1],w=h*0.72,y=96-h;s+=`<path d="M${x} ${y}h${w}l-${w*0.12} ${h}h-${w*0.76}z" fill="${i===hi?"#2f9e63":"#efe7d6"}" stroke="${i===hi?"#1f7448":"#b9ae98"}" stroke-width="2"/><rect x="${x-2}" y="${y-6}" width="${w+4}" height="7" rx="2" fill="${i===hi?"#1f7448":"#b9ae98"}"/>`;x+=w+10});
+ return `<svg viewBox="0 0 ${x+2} 104" width="280" aria-label="cup sizes">${s}</svg>`;
+}
+function renderImg(spec){
+ if(!spec)return"";const [k,a,b]=spec.split(":");
+ if(k==="bag")return bagArt(a,b);
+ if(k==="cherry")return cherryArt(+a);
+ if(k==="grind")return grindArt(+a);
+ if(k==="cups")return cupsArt(+a);
+ return"";
+}
+
+/* ============ question builders ============ */
+const mc=(id,q,opts,a,ex,img)=>({id,t:"mc",q,opts,a,ex,img});
+const tf=(id,q,a,ex,img)=>({id,t:"tf",q,a,ex,img});
+const mu=(id,q,opts,a,ex,img)=>({id,t:"multi",q,opts,a,ex,img});
+const ma=(id,pairs,q)=>({id,t:"match",pairs,q});
+const fi=(id,s,a,d,ex,q)=>({id,t:"fill",s,a,d,ex,q});
+const pick=(arr,n,not=[])=>shuffle(arr.filter(x=>!not.includes(x))).slice(0,n);
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function seeded(arr,seed,n){const a=arr.slice();let s=seed;for(let i=a.length-1;i>0;i--){s=(s*9301+49297)%233280;const j=Math.floor(s/233280*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a.slice(0,n)}
+
+/* ============ data ============ */
+const CORE=[
+ ["LNB","ライトノートブレンド","水洗","BLONDE","HOTのみ","Toasted Malt & Milk Chocolate","ハチドリ"],
+ ["BEB","ブロンド エスプレッソ","水洗","BLONDE",null,"Candied Apple & Bittersweet Chocolate",null],
+ ["BRK","ブレックファーストブレンド","水洗","MEDIUM","HOTのみ","Brown Sugar & Sweet Orange","太陽・山・鳥"],
+ ["SRN","サイレンブレンド","水洗","MEDIUM","HOT&ICE","Juicy Citrus & Chocolate","サイレン"],
+ ["KEN","ケニア","水洗","MEDIUM","HOT&ICE","Black Currant & Grapefruits","アフリカゾウ"],
+ ["EDB","パイクプレイスロースト","水洗","MEDIUM","HOTのみ","Cocoa & Rich Praline","豚のレイチェル"],
+ ["GUA","グアテマラ アンティグア","水洗","MEDIUM","HOT&ICE","Cocoa & Baking Spice","ケツァール"],
+ ["HOU","ハウスブレンド","水洗","MEDIUM","HOT&ICE","Toffee & Dusted Cocoa","コーヒースクープ"],
+ ["CLG","コロンビア","水洗","MEDIUM","HOT&ICE","Toasted Walnut & Herbs","アンデスコンドル"],
+ ["TYO","TOKYO ロースト","水洗/半水洗","MEDIUM","HOTのみ","Cinnamon & Tarragon","灰色グマ"],
+ ["CBR","コールドブリュー","水洗","MEDIUM",null,null,null],
+ ["SUM","スマトラ","半水洗","DARK","HOTのみ","Rich Herbs & Rustic Spice","スマトラトラ"],
+ ["KDR","コモドドラゴンブレンド","水洗/半水洗","DARK","HOTのみ","Fresh Herbs & Warm Spice","コモドドラゴン"],
+ ["VER","カフェ ベロナ","水洗/半水洗","DARK","HOTのみ","Dark Cocoa & Caramelized Sugar","赤いバラ"],
+ ["ESP","エスプレッソ ロースト","水洗/半水洗","DARK","不可","Rich Molasses & Caramel","シルバー（クレマ）"],
+ ["ITA","イタリアンロースト","水洗/半水洗","DARK","ICEのみ","Dark Cocoa & Toasted Marshmallow","ヴェスパ"],
+ ["FRE","フレンチロースト","地域により異なる","DARK","不可","Dark Caramel & Sweet Smoke","フルール・ド・リス"]
+];
+const PROMO=[
+ ["ETH","エチオピア","BLONDE"],["GCC","グアテマラ カシシエロ","MEDIUM"],["SSB","スプリングシーズンブレンド","MEDIUM"],["KLB","コペラニ","MEDIUM"],["ICB","アイスコーヒーブレンド","MEDIUM"],["EAB","カティカティブレンド","BLONDE"],["SMD","スマトラ マサ デパン","BLONDE"],["EDR","1971 ダークロースト","DARK"],["AUB","オータムブレンド","DARK"],["HAC","ハシエンダ アルサシア","MEDIUM"],["XMA","クリスマスブレンド","DARK"],["XMB","クリスマス ブロンドロースト","BLONDE"],["XME","クリスマスブレンド エスプレッソ","DARK"],["DXM","ディカフェ クリスマスブレンド","DARK"]
+];
+const names=CORE.map(r=>r[1]), codes=CORE.map(r=>r[0]);
+
+function genCoreBasic(){
+ const q=[];
+ CORE.forEach((r,i)=>{
+  q.push(mc("cb1-"+r[0],B(`「${r[0]}」はどのコーヒー？`,`「${r[0]}」是哪支咖啡？`),[r[1],...seeded(names.filter(n=>n!==r[1]),i+3,3)],0,null,`bag:${r[0]}:${r[3]}`));
+  q.push(mc("cb2-"+r[0],B(`「${r[1]}」の3レターは？`,`「${r[1]}」的三字母代碼是？`),[r[0],...seeded(codes.filter(n=>n!==r[0]),i+7,3)],0));
+  q.push(mc("cb3-"+r[0],B(`${r[0]}（${r[1]}）のローストは？`,`${r[0]}（${r[1]}）是哪種烘焙？`),["BLONDE","MEDIUM","DARK"],["BLONDE","MEDIUM","DARK"].indexOf(r[3]),null,`bag:${r[0]}:X`));
+ });
+ for(let k=0;k<4;k++){const rows=seeded(CORE,k*11+5,5);q.push(ma("cbm"+k,rows.map(r=>[r[0],r[1]])))}
+ q.push(tf("cbt1",B("コアコーヒーは17種類。BNA（エチオピア）はFY27版のコアに入っていない。","FY27 版コアコーヒー共 17 支，BNA（衣索比亞）不在其中。"),true,B("エチオピアは FY26 プロモの ETH として登場。","衣索比亞改以 FY26 プロモ的 ETH 出現。")));
+ q.push(mc("cbx1",B("DHO はどのコーヒーのディカフェ？","DHO 是哪支咖啡的低咖啡因版？"),["HOU","EDB","ESP","VER"],0));
+ q.push(mc("cbx2",B("DES はどのコーヒーのディカフェ？","DES 是哪支咖啡的低咖啡因版？"),["ESP","EDB","HOU","ITA"],0));
+ q.push(mc("cbx3",B("EDB の3レターの由来は？","EDB 三個字母的由來？"),["Everyday Brew","Espresso Development Blend","Early Day Blend","East Drip Blend"],0));
+ return q;
+}
+function genCoreKey(){
+ const q=[];const rows=CORE.filter(r=>r[5]);const kws=rows.map(r=>r[5]);
+ rows.forEach((r,i)=>{
+  q.push(mc("ck1-"+r[0],B(`キーワード「${r[5]}」のコーヒーは？`,`キーワード「${r[5]}」是哪支？`),[r[0],...seeded(rows.map(x=>x[0]).filter(c=>c!==r[0]),i+2,3)],0));
+  q.push(mc("ck2-"+r[0],B(`${r[0]}（${r[1]}）のキーワードは？`,`${r[0]}（${r[1]}）的キーワード是？`),[r[5],...seeded(kws.filter(k=>k!==r[5]),i+9,3)],0));
+ });
+ for(let k=0;k<4;k++){const rs=seeded(rows,k*13+1,4);q.push(ma("ckm"+k,rs.map(r=>[r[0],r[5]])))}
+ return q;
+}
+function genCoreDetail(){
+ const q=[];const D=["HOTのみ","HOT&ICE","ICEのみ","不可"];
+ CORE.filter(r=>r[4]).forEach(r=>q.push(mc("cd1-"+r[0],B(`${r[0]}（${r[1]}）の店内ドリップ提供は？`,`${r[0]}（${r[1]}）的店內滴濾提供是？`),D,D.indexOf(r[4]))));
+ const P=["水洗","半水洗","水洗/半水洗","地域により異なる"];
+ CORE.forEach(r=>q.push(mc("cd2-"+r[0],B(`${r[0]}の加工法は？`,`${r[0]}的加工法是？`),P,P.indexOf(r[2]))));
+ const pk=CORE.filter(r=>r[6]);
+ for(let k=0;k<4;k++){const rs=seeded(pk,k*7+2,4);q.push(ma("cdm"+k,rs.map(r=>[r[0],r[6]]),B("パッケージと3レターを組み合わせよう","把包裝圖案和代碼配對")))}
+ q.push(mc("cdx1",B("LNB は何回以上のテイスティングを経て作られた？","LNB 經過幾次以上的試飲製作？"),["80","40","25","100"],0));
+ q.push(mc("cdx2",B("LNB の北米での名前は？","LNB 在北美叫什麼？"),["ヴェランダ ブレンド","ウィロー ブレンド","ゴールデン ロースト","トリビュート ブレンド"],0,B("中国では Blonde を「ゴールデンロースト」と呼ぶ。","中國把 Blonde 叫「ゴールデンロースト」。")));
+ q.push(mc("cdx3",B("BEB が北米で初めて登場したのは？","BEB 在北美首次登場是？"),["2017年 カナダ","2011年 アメリカ","2019年 日本","2008年 カナダ"],0));
+ q.push(mc("cdx4",B("EDB のパッケージの数字「1912」は何？","EDB 包裝上的「1912」是什麼？"),[B("パイクプレイスマーケットの番地","派克市場的門牌號"),B("創業年","創業年"),B("1号店の電話番号","1 號店電話"),B("最初の焙煎日","第一次烘焙日")],0));
+ q.push(mc("cdx5",B("店内 CBR（コールドブリュー）の抽出条件は？","店內 CBR（冷萃）的萃取條件？"),[B("常温で14時間・マルコニック6番","常溫 14 小時・6 號"),B("冷蔵庫で12時間・10番","冷藏 12 小時・10 號"),B("常温で16時間・13番","常溫 16 小時・13 號"),B("冷蔵庫で14時間・6番","冷藏 14 小時・6 號")],0));
+ q.push(mc("cdx6",B("TYO は何のレシピを使っている？","TYO 使用的是哪支的配方？"),["ユーコンブレンド","ゴールドコーストブレンド","ガゼボブレンド","80/20 ブレンド"],0));
+ q.push(tf("cdx7",B("FRE のカフェイン量は他のコーヒーより多い。","FRE 的咖啡因比其他咖啡多。"),false,B("他のコーヒーと変わらない。","跟其他咖啡沒有差別。")));
+ q.push(tf("cdx8",B("ESP→BEB への変更は無料。","ESP 換成 BEB 不加價。"),true));
+ q.push(mc("cdx9",B("最深煎りを東海岸・西海岸では何と呼ぶ？","最深焙在東岸、西岸各叫什麼？"),[B("東：イタリアン／西：フレンチ","東：義式／西：法式"),B("東：フレンチ／西：イタリアン","東：法式／西：義式"),B("東：エスプレッソ／西：フレンチ","東：濃縮／西：法式"),B("東：イタリアン／西：エスプレッソ","東：義式／西：濃縮")],0));
+ return q;
+}
+function genPromo(){
+ const q=[];const pn=PROMO.map(p=>p[1]);
+ PROMO.forEach((p,i)=>{
+  q.push(mc("pr1-"+p[0],B(`「${p[0]}」はどのコーヒー？`,`「${p[0]}」是哪支咖啡？`),[p[1],...seeded(pn.filter(n=>n!==p[1]),i+4,3)],0,null,`bag:${p[0]}:${p[2]}`));
+  q.push(mc("pr2-"+p[0],B(`${p[0]}（${p[1]}）のローストは？`,`${p[0]}（${p[1]}）是哪種烘焙？`),["BLONDE","MEDIUM","DARK"],["BLONDE","MEDIUM","DARK"].indexOf(p[2]),null,`bag:${p[0]}:X`));
+ });
+ q.push(mu("prs1",B("SMD スマトラ マサ デパンについて正しいものは？","關於 SMD スマトラ マサ デパン，正確的有？"),[B("ローストは BLONDE","烘焙是 BLONDE"),B("加工法は水洗式／乾燥式","加工是水洗式／乾燥式"),B("加工法は半水洗式のみ","只有半水洗式"),B("焙煎プロファイルは米国チームが決めた","烘焙曲線由美國團隊決定")],[0,1],B("焙煎プロファイルと仕上げの色は日本のチームが担当。","烘焙曲線與完成色由日本團隊負責。")));
+ q.push(mc("prs2",B("「マサ デパン」の意味は？","「マサ デパン」是什麼意思？"),[B("未来","未來"),B("二度","兩次"),B("天国","天堂"),B("間","之間")],0,B("インドネシア語で「未来」。日本30周年のテーマは「未来」と「共創」。","印尼語「未來」。日本 30 周年主題是「未來」與「共創」。")));
+ q.push(mc("prs3",B("SMD の生豆を加工した農園は？","SMD 生豆在哪個莊園加工？"),["ワハナ エステート","ハシエンダ アルサシア","モンテカルロス農園","ラ リンダ"],0));
+ q.push(mc("prs4",B("SMD のキーワードは？","SMD 的キーワード是？"),["Juicy Watermelon & SENCHA","Tangerine & Lemon Balm","Meyer Lemon & Cocoa Nibs","Toasted Sugar & Rich Walnut"],0));
+ q.push(mc("prs5",B("KLB コペラニに含まれるコナコーヒーの割合は？","KLB 含多少科納咖啡？"),["10%","5%","25%","50%"],0));
+ q.push(mc("prs6",B("「コペラニ」のハワイ語の意味は？","「コペラニ」的夏威夷語意思？"),[B("至福のコーヒー","至福的咖啡"),B("海のコーヒー","海的咖啡"),B("朝のコーヒー","早晨的咖啡"),B("火山のコーヒー","火山的咖啡")],0));
+ q.push(mc("prs7",B("EAB がミディアムから BLONDE に変わったのは？","EAB 從中焙改成 BLONDE 是哪年？"),["2025","2020","2011","2026"],0));
+ q.push(mc("prs8",B("スワヒリ語「カティカティ」の意味は？","斯瓦希里語「カティカティ」的意思？"),[B("間（between）","之間"),B("果物","水果"),B("未来","未來"),B("友情","友情")],0));
+ q.push(mc("prs9",B("ICB（アイスコーヒーブレンド）の前身は？","ICB 的前身是？"),[B("2006年 テラッツァブレンド","2006 年 Terraza"),B("1971年 ユーコン","1971 年 Yukon"),B("1990年 ガゼボ","1990 年 Gazebo"),B("2011年 トリビュート","2011 年 Tribute")],0));
+ q.push(tf("prs10",B("EDR（1971 ダークロースト）は今後もコア豆として販売が続く。","EDR（1971 深焙）之後會作為コア豆繼續販售。"),true,B("8か月・40回の試作で開発。シルバーパック 1lb。","開發 8 個月、試作 40 次。")));
+ q.push(tf("prs11",B("DXM（ディカフェ クリスマスブレンド）は今年初登場。","DXM 今年第一次登場。"),true));
+ q.push(mc("prs12",B("XME はどのコーヒーのホリデー版？","XME 是哪支的節慶版？"),["ESP","HOU","VER","EDB"],0));
+ q.push(mc("prs13",B("XMA（クリスマスブレンド）の発売開始年は？","XMA 最早是哪年開始？"),["1984","1971","2012","1996"],0,B("エイジドスマトラを使用。","使用陳年蘇門答臘。")));
+ q.push(mc("prs14",B("XMB が現在のレシピになったのは？","XMB 改成現行配方是哪年？"),["2020","2012","2025","2015"],0));
+ q.push(mc("prs15",B("SSB の焙煎が軽くなったのは何年から？","SSB 從哪年開始烘焙變淺？"),["2024","2011","2020","2026"],0,B("元はトリビュートブレンド（2011年・40周年）のレシピ。","原本是 2011 年 40 周年 Tribute 的配方。")));
+ q.push(mc("prs16",B("GCC カシシエロの意味は？","GCC 卡西西耶洛的意思？"),[B("天国にいるかのような（Almost Heaven）","彷彿置身天堂"),B("雲の上","雲端之上"),B("火山の恵み","火山的恩賜"),B("小さな宝石","小寶石")],0));
+ q.push(mu("prs17",B("AUB オータムブレンドの産地を全て選んで","選出 AUB 秋季綜合的所有產地"),["グアテマラ","インドネシア","エチオピア","ケニア"],[0,1,2]));
+ q.push(mc("prs18",B("FIT（フェアトレード イタリアンロースト）は何番目に深い？","FIT 是第幾深的烘焙？"),[B("2番目（FRE→FIT→ESP）","第 2（FRE→FIT→ESP）"),B("1番目","第 1"),B("3番目","第 3"),B("4番目","第 4")],0));
+ return q;
+}
+const MPV=[
+ fi("mp1","「___」のコーヒー体験を届けるかけがえのない存在となり、人々の心を___で___にするために",["最高","豊か","活力あるもの"],["最良","温か","笑顔あふれるもの"],B("Our Mission","Our Mission（使命）")),
+ fi("mp2","一人のお客様、この一杯、そしてひとつの___から",["コミュニティ"],["つながり","店舗"],B("Our Mission の続き","Our Mission 的後半")),
+ fi("mp3","Our Partner Promise：一人ひとりの___な明日を",["心豊か"],["笑顔あふれる","幸せ"]),
+ fi("mp4","Our Customer Promise：心をこめた一杯を___の瞬間とともに",["つながり"],["しあわせ","感動"]),
+ fi("mp5","Our Farmer Promise：コーヒーの___を確かなものに",["未来"],["品質","価値"]),
+ fi("mp6","Our Community Promise：___をつくり___な変化を",["仲間","前向き"],["居場所","大きな"]),
+ fi("mp7","Our Environmental Promise：自然のめぐみを___な循環へ",["ポジティブ"],["持続的","豊か"],B("公式模擬問題 Q4","官方模擬題 Q4")),
+ fi("mp8","Our Shareholder Promise：___永きにわたる成長を",["たゆみなく"],["着実に","力強く"]),
+ fi("mp9","私たちは、___を大切にしながら___し続けます",["人間らしさ","成長"],["誠実さ","挑戦"],B("Our Values","Our Values")),
+ ma("mp10",[["Craft","思いをかたちにする"],["Result","成果に責任をもつ"],["Courage","勇気をもって向き合う"],["Belonging","互いを理解し認め合う"],["Joy","楽しむことを力に"]]),
+ fi("mp11","Courage：互いの成長のために、___をもって___に意見を交わし",["敬意","率直"],["誇り","大胆"]),
+ fi("mp12","Craft：どんな仕事にも___まで心を尽くし…___の体験を届けます",["細部","唯一無二"],["最後","最高"]),
+ fi("mp13","Joy：自らの仕事に___をもって楽しみながら、互いを___し",["誇り","称賛"],["自信","尊重"]),
+ fi("mp14","Customer Service Standard：一人ひとりを思いやり、___瞬間を創りつづけます",["心つながる"],["笑顔になる","特別な"]),
+ ma("mp15",[["Craft",B("一杯ずつ思いを込めて作る","一杯一杯用心製作")],["Coffee Story",B("自分の言葉でストーリーを伝える","用自己的話傳達故事")],["Connection",B("コーヒーを通じたつながり","透過咖啡創造連結")]],B("Be a Barista の 3C を組み合わせよう","把 Be a Barista 的 3C 配對")),
+ mc("mp16",B("Green Apron Expectations に含まれないものは？","哪一項不在 Green Apron Expectations 裡？"),[B("スピードを最優先する","速度最優先"),B("笑顔で歓迎する","以笑容歡迎"),B("お客様を知る","了解顧客"),B("気持ちに応える","回應心情")],0),
+ fi("mp17","バリスタは、コーヒーがお客様に届くまでの最後の___を担っている",["10フィート"],["1メートル","一杯"]),
+ fi("mp18","Belonging：___な声に___ら耳を傾け",["多様","自"],["様々","共"]),
+ fi("mp19","Result：___と意欲をもって…人々の___を超えていきます",["誠実さ","期待"],["情熱","想像"])
+];
+const ORIGIN=[
+ ma("og1",[["ルワンダ","キガリ"],["タンザニア","ムベヤ"],["コロンビア","マニサレス"],["メキシコ","チアパス"],["ブラジル","バルジニャ"]],B("FSC の国と都市を組み合わせよう","把 FSC 的國家和城市配對")),
+ ma("og2",[["インドネシア","北スマトラ"],["中国","雲南"],["グアテマラ","グアテマラシティ"],["エチオピア","アディスアベバ"],["コスタリカ","アラフエラ"]],B("FSC の国と都市を組み合わせよう","把 FSC 的國家和城市配對")),
+ ma("og3",[["2004","サンホセに最初の FSC"],["2009","ルワンダ キガリ"],["2013","ハシエンダ アルサシア購入"],["2021","ブラジル バルジニャ"]],B("年と出来事を組み合わせよう","把年份和事件配對")),
+ mc("og4",B("ハシエンダ アルサシアがあるのは？","哈西恩達阿爾薩西亞在哪裡？"),[B("コスタリカ・ポアス火山","哥斯大黎加・波阿斯火山"),B("グアテマラ・アグア火山","瓜地馬拉・阿瓜火山"),B("コロンビア・ウィラ","哥倫比亞・烏伊拉"),B("メキシコ・チアパス","墨西哥・恰帕斯")],0),
+ mc("og5",B("ハシエンダ アルサシアの面積は？","哈西恩達阿爾薩西亞的面積？"),["240 ha","10 ha","1,000 ha","50 ha"],0),
+ mc("og6",B("ハシエンダ アルサシア ビジターセンターのオープンは？","阿爾薩西亞遊客中心何時開幕？"),["2018年3月","2013年3月","2016年4月","2021年2月"],0),
+ mc("og7",B("スターバックスが購入するアラビカ種の標高は？","星巴克購買的阿拉比卡標高？"),["900〜1,800 m","500〜1,000 m","1,200〜2,500 m","300 m 以上"],0),
+ mc("og8",B("2〜5 ha の農園を何という？","2〜5 公頃的農園叫？"),["小規模農園","エステート","マイクロエステート","協同組合"],0),
+ mc("og9",B("50 ha 以上の大きな農園は？","50 公頃以上的大農園叫？"),["エステート","小規模農園","コレクター","ドライミル"],0),
+ mc("og10",B("世界の生産量のうち、スターバックスが購入しているのは？","星巴克買下全世界產量的多少？"),["5%","1%","15%","30%"],0),
+ mc("og11",B("「千の丘の国」と呼ばれるのは？","被稱為「千丘之國」的是？"),["ルワンダ","ケニア","エチオピア","ブルンジ"],0),
+ mc("og12",B("「火山の地」と呼ばれ、23の活火山があるのは？","被稱為「火山之地」、有 23 座活火山的是？"),["エルサルバドル","コスタリカ","グアテマラ","ニカラグア"],0),
+ mc("og13",B("エイジド コーヒーの倉庫がある国は？","陳年咖啡的倉庫在哪個國家？"),["シンガポール","インドネシア","オランダ","スイス"],0),
+ mc("og14",B("パプアニューギニアは世界で何番目に大きい島？","巴布亞紐幾內亞是世界第幾大島？"),[B("3番目","第 3"),B("1番目","第 1"),B("6番目","第 6"),B("10番目","第 10")],0),
+ mc("og15",B("ケニアにコーヒーを持ち込んだのは？","把咖啡帶進肯亞的是？"),[B("1893年 フランス人宣教師","1893 年法國傳教士"),B("1904年 ドイツ人宣教師","1904 年德國傳教士"),B("1727年 ポルトガル人","1727 年葡萄牙人"),B("1700年代 オランダ人","1700 年代荷蘭人")],0,B("1904年ドイツ人宣教師はルワンダ。","1904 年德國傳教士是盧安達。")),
+ mu("og16",B("アラビカ種のみが栽培されている東アフリカの国を全て選んで","選出只栽種阿拉比卡的東非國家"),["ブルンジ","ルワンダ","カメルーン","コンゴ民主共和国"],[0,1],B("カメルーンとコンゴ民主共和国はアラビカとロブスタ両方。","喀麥隆和剛果民主共和國兩種都種。")),
+ mc("og17",B("スターバックスが購入する農園の何%以上が小規模？","星巴克購買的農園中小規模占多少？"),["90%","50%","70%","99%"],0),
+ mc("og18",B("コロンビアの店舗のビバレッジに使うコロンビア産の割合は？","哥倫比亞門市飲品使用哥倫比亞豆的比例？"),["100%","50%","80%","25%"],0),
+ mc("og19",B("ブラジルのアラビカ種生産量は世界何位？","巴西阿拉比卡產量世界第幾？"),[B("1位","第 1"),B("2位","第 2"),B("3位","第 3"),B("5位","第 5")],0),
+ mc("og20",B("ベトナムに1800年代にコーヒーが持ち込まれた省は？","1800 年代咖啡被帶進越南哪個省？"),["ラムドン省","ダクラク省","ハノイ","ザライ省"],0),
+ mc("og21",B("ペルーの約半数以上の品種は？","祕魯一半以上是什麼品種？"),["ティピカ","ゲイシャ","カトゥーラ","パカマラ"],0),
+ mc("og22",B("ルワンダ北部の協同組合にある女性だけのグループは？","盧安達北部合作社中的女性團體叫？"),["ヒンガカワ","アバクンダクワ","ギリンバサ","アガセチェ"],0,B("アバクンダクワは協同組合の名前。","アバクンダクワ是合作社的名字。")),
+ mc("og23",B("FSC のアグロノミストが行うことは？","FSC 農學家做的事是？"),[B("土壌分析と新品種のサポート","土壤分析與新品種支援"),B("生豆の購入契約","生豆採購合約"),B("焙煎レシピの開発","烘焙配方開發"),B("店舗への輸送","運送到門市")],0)
+];
+const SUMATRA=[
+ mu("su1",B("インドネシアの半水洗式の現地での呼び方を全て選んで","選出印尼半水洗式的當地名稱"),["ウェットハル","ギリンバサ","パルプドナチュラル","ハニーウォッシュド"],[0,1]),
+ mc("su2",B("農家からチェリーやパーチメントを集めてミルへ運ぶ人は？","向農家收購後送去處理廠的人叫？"),["コレクター","ピッカー","アグロノミスト","エクスポーター"],0),
+ mc("su3",B("スマトラ唯一、水洗・半水洗・乾燥すべての加工を行うエステートは？","蘇門答臘唯一三種加工都做的莊園是？"),["ワハナ エステート","モンデュール エステート","エンデベス エステート","ハシエンダ アルサシア"],0),
+ mc("su4",B("スマトラの FSC が開設されたのは？","蘇門答臘的 FSC 開設在？"),[B("2015年 ベラスタギ","2015 年 Berastagi"),B("2016年 メダン","2016 年 Medan"),B("2012年 トバ湖","2012 年多巴湖"),B("2018年 アチェ","2018 年亞齊")],0),
+ mc("su5",B("スマトラ FSC がサポートしている農家の数は？","蘇門答臘 FSC 支援的農家數？"),["約 14,000","約 1,400","約 140,000","約 4,000"],0),
+ mc("su6",B("スマトラ全域のコーヒーの市場での名称は？","蘇門答臘全區咖啡的市場名稱？"),["マンデリン","ガヨ","リントン","トラジャ"],0),
+ mc("su7",B("スマトラ島は世界で何番目に大きい島？","蘇門答臘是世界第幾大島？"),[B("6番目","第 6"),B("3番目","第 3"),B("1番目","第 1"),B("10番目","第 10")],0),
+ mc("su8",B("ウェットハルの最大の特徴は？","濕剝法最大的特色？"),[B("半乾燥の湿った状態で脱殻する","在半乾、還濕的狀態脫殼"),B("水を一切使わない","完全不用水"),B("72時間発酵させる","發酵 72 小時"),B("チェリーごと天日干しする","整顆櫻桃日曬")],0),
+ mc("su9",B("乾燥ムラを防ぐためにかき混ぜる道具は？","防止乾燥不均攪拌用的工具？"),["レーキ","ハンドパルパー","ルワク","タープ"],0),
+ mc("su10",B("GCQ の検査で不合格になる生豆は年間何%？","GCQ 檢查每年不合格的生豆是？"),["1〜2%","10%","25%","0.1%"],0),
+ mc("su11",B("スマトラ豆の多くはダークロースト。焙煎時間は約？","蘇門答臘多為深焙，烘焙時間約？"),[B("13分","13 分鐘"),B("6分","6 分鐘"),B("9分","9 分鐘"),B("20分","20 分鐘")],0),
+ mc("su12",B("焙煎後の豆に充填するのは？","烘焙後的豆子充填什麼？"),[B("窒素","氮氣"),B("二酸化炭素","二氧化碳"),B("酸素","氧氣"),B("アルゴン","氬氣")],0),
+ tf("su13",B("スマトラの生豆は空輸で日本に運ばれる。","蘇門答臘生豆用空運送到日本。"),false,B("船で約8日間。","用船，約 8 天。")),
+ mc("su14",B("スマトラはインドネシアのアラビカ種の約何%を生産？","蘇門答臘生產印尼約多少的阿拉比卡？"),["67%","30%","90%","50%"],0),
+ mc("su15",B("トバ湖ができたのは約何年前？","多巴湖約在多久前形成？"),[B("7万4000年前","7 萬 4000 年前"),B("1万年前","1 萬年前"),B("100万年前","100 萬年前"),B("3000年前","3000 年前")],0),
+ mc("su16",B("スターバックスが購入するスマトラ豆の等級は？","星巴克購買的蘇門答臘等級是？"),[B("グレード1 トリプルピック","Grade 1 三次手選"),B("グレード3","Grade 3"),B("グレード6","Grade 6"),B("スペシャルピーベリー","特級圓豆")],0)
+];
+const CAFE=[
+ mc("cf1",B("C.A.F.E. プラクティスの「C.A.F.E.」とは？","C.A.F.E. 是什麼的縮寫？"),["Coffee and Farmer Equity","Coffee And Fair Exchange","Certified Arabica Farm Ethics","Community And Farmer Environment"],0),
+ ma("cf2",[["1998",B("CI と協業開始","與 CI 開始合作")],["2001",B("C.A.F.E. 策定","制定 C.A.F.E.")],["2004",B("正式導入","正式導入")],["2015年4月",B("エシカル調達 99%","道德採購 99%")]],B("年と出来事を組み合わせよう","把年份和事件配對")),
+ mu("cf3",B("C.A.F.E. の4つの柱のうち「必須条件」を全て選んで","選出 C.A.F.E. 四支柱中的「必須條件」"),["品質基準","経済的な透明性","社会的責任","環境面でのリーダーシップ"],[0,1]),
+ mu("cf4",B("第三者機関 SCS が評価する柱を全て選んで","選出由第三方 SCS 評估的支柱"),["社会的責任","環境面でのリーダーシップ","品質基準","経済的な透明性"],[0,1]),
+ mu("cf5",B("「社会的責任」の指標を全て選んで","選出「社會責任」的指標"),["賃金と労働","医療ケアへのアクセス","水域の保護","野生動物の保護"],[0,1],B("水域・野生動物は環境面でのリーダーシップ。","水域與野生動物屬於環境領導。")),
+ mu("cf6",B("「環境面でのリーダーシップ」の指標を全て選んで","選出「環境領導」的指標"),["気候変動","地表浸食のコントロール","労働時間","教育へのアクセス"],[0,1]),
+ tf("cf7",B("C.A.F.E. プラクティスは単なる認証システムである。","C.A.F.E. 只是一套認證制度。"),false,B("継続的な向上を促す包括的なアプローチ。","是促進持續改善的整體做法。")),
+ tf("cf8",B("スターバックスは C.A.F.E. に基づいて栽培するすべての農園から購入している。","星巴克向所有實行 C.A.F.E. 的農園購買。"),false,B("「すべての」農園からではない（公式模擬問題 Q1）。","並不是「所有」農園（官方模擬題 Q1）。")),
+ mc("cf9",B("SCTC（スターバックス コーヒー トレーディング カンパニー）はどこ？","SCTC 在哪裡？"),[B("スイス ローザンヌ","瑞士洛桑"),B("アメリカ シアトル","美國西雅圖"),B("オランダ アムステルダム","荷蘭阿姆斯特丹"),B("シンガポール","新加坡")],0),
+ mc("cf10",B("到着サンプルを評価する GCQ の拠点は？","評估到貨樣品的 GCQ 在哪？"),[B("シアトル","西雅圖"),B("ローザンヌ","洛桑"),B("コスタリカ","哥斯大黎加"),B("東京","東京")],0),
+ mc("cf11",B("サンプルの正しい順番は？","樣品的正確順序？"),["オファー → 出荷前 → 到着","出荷前 → オファー → 到着","到着 → オファー → 出荷前","オファー → 到着 → 出荷前"],0),
+ mu("cf12",B("SCTC の役割として正しいものを全て選んで","選出 SCTC 的正確角色"),[B("生産者・サプライヤーとの関係強化","強化與生產者、供應商的關係"),B("全サプライヤーとの取引関係の管理","管理所有供應商交易"),B("生産国から焙煎工場までの輸送","生產國到烘焙廠的運輸"),B("コーヒー生産コスト管理のサポート","生產成本管理支援")],[0,1,2],B("生産コストのサポートは FSC の領域（公式模擬問題 Q13）。","生產成本支援是 FSC 的工作（官方模擬題 Q13）。")),
+ mc("cf13",B("C.A.F.E. のスコアカードの規模は？","C.A.F.E. 評分表的規模？"),[B("30基準／150指標","30 基準／150 指標"),B("10基準／50指標","10 基準／50 指標"),B("4基準／188指標","4 基準／188 指標"),B("70基準／200指標","70 基準／200 指標")],0),
+ mc("cf14",B("戦略的サプライヤーの条件は？","戰略供應商的條件？"),[B("80%以上・4年","80% 以上・4 年"),B("60%以上・3年","60% 以上・3 年"),B("60%以下・2年","60% 以下・2 年"),B("99%以上・5年","99% 以上・5 年")],0),
+ mc("cf15",B("スターバックスが年間に行うカッピングは？","星巴克一年做多少杯杯測？"),[B("25万カップ以上","25 萬杯以上"),B("2万5千カップ","2.5 萬杯"),B("100万カップ","100 萬杯"),B("5千カップ","5 千杯")],0),
+ mc("cf16",B("C.A.F.E. に参加した生産者の収入は平均どれくらい増えた？","參加 C.A.F.E. 的生產者收入平均增加多少？"),[B("4割","4 成"),B("1割","1 成"),B("2倍","2 倍"),B("7割","7 成")],0),
+ mc("cf17",B("C.A.F.E. のチェック項目数は？","C.A.F.E. 檢查項目數？"),["188","70","30","99"],0),
+ mc("cf18",B("最低賃金など社会的責任の禁止事項に適用される方針は？","最低薪資等禁止事項適用的方針？"),["ゼロ・トレランス","オープンソース","ベストエフォート","スコアリング"],0),
+ mc("cf19",B("グローバル アグロノミー センター長は？","全球農學中心主任是？"),["カルロス・マリオ・ロドリゲス","デイブ・オルセン","カルロス・パトレス","ビクター・トレホス"],0),
+ mc("cf20",B("WCR の「コアコレクション」は何系統？","WCR 的核心收藏有幾個系統？"),["100","50","25","188"],0)
+];
+const PROC=[
+ ...CH_LAYERS.map((l,i)=>mc("ch"+i,B(`図の ${i+1} の層は？`,`圖中第 ${i+1} 層是？`),[l[0],...seeded(CH_LAYERS.map(x=>x[0]).filter(x=>x!==l[0]),i+1,3)],0,null,`cherry:${i}`)),
+ mc("pc1",B("コーヒー豆の構造を外側から正しく並べたものは？","咖啡豆結構由外到內正確的是？"),["果皮→果肉→ミューシレージ→パーチメント→シルバースキン→生豆","果皮→果肉→シルバースキン→ミューシレージ→パーチメント→生豆","果皮→果肉→パーチメント→シルバースキン→ミューシレージ→生豆","果皮→ミューシレージ→果肉→パーチメント→シルバースキン→生豆"],0,null,"cherry:-1"),
+ mc("pc2",B("果肉はコーヒーチェリーの総重量のおよそ何%？","果肉約占咖啡櫻桃總重的多少？"),["80%","20%","50%","95%"],0),
+ mc("pc3",B("ピーベリーはチェリーの何%に見られる？","圓豆出現在多少比例的櫻桃中？"),["5〜10%","1%未満","20〜30%","50%"],0),
+ ma("pc4",[["水洗式","LIGHT・CLEAN・TANGY"],["半水洗式","LOWER ACIDITY・FULL BODIED・SMOOTH"],["乾燥式","WILD・UNPREDICTABLE・BERRY"]],B("加工法とキーワードを組み合わせよう","把加工法和關鍵字配對")),
+ mc("pc5",B("水洗式の伝統的な発酵時間は？","水洗式傳統發酵時間？"),[B("18〜36時間","18〜36 小時"),B("1〜2時間","1〜2 小時"),B("3〜5日","3〜5 天"),B("2週間","2 週")],0),
+ mc("pc6",B("半水洗式で使う手回し式の果肉除去機は？","半水洗式用的手搖果肉去除機叫？"),["ハンドパルパー（ルワク）","デパルパー","レーキ","回転式ドラム"],0),
+ mu("pc7",B("加工後の生豆の選別方法を全て選んで","選出生豆的分級方法"),[B("手作業","手工"),B("色","顏色"),B("密度","密度"),B("香り","香氣")],[0,1,2]),
+ mc("pc8",B("生豆の麻袋の重さは？","生豆麻袋重量？"),["60 kg","30 kg","100 kg","15 kg"],0),
+ tf("pc9",B("ハニープロセスは発酵させずに粘液を残したまま乾燥させる。","蜜處理不發酵、留著果膠乾燥。"),true,B("色で分類される。中米に多い。","依顏色分類，中美洲常見。")),
+ mc("pc10",B("1930年代にブラジルで発見された品種は？","1930 年代在巴西發現的品種？"),["カトゥーラ","カトゥアイ","ゲイシャ","パカマラ"],0,B("カトゥアイはカトゥーラ×ムンドノーボでブラジルで開発。","カトゥアイ是卡杜拉×新世界，在巴西開發。")),
+ mc("pc11",B("パカマラはどの品種の交配？","帕卡馬拉是哪兩個品種交配？"),["パカス × マラゴジッペ","ブルボン × ティピカ","カトゥーラ × ムンドノーボ","ゲイシャ × ブルボン"],0),
+ mc("pc12",B("発芽後約6週の苗は何と呼ばれる？","發芽約 6 週的幼苗叫？"),[B("ソルジャー（マッチ棒）","士兵（火柴棒）"),B("バタフライ","蝴蝶"),B("フライクロップ","Fly crop"),B("ミタカ","Mitaca")],0),
+ mc("pc13",B("開花からチェリーの収穫までは約？","開花到收成約？"),[B("9か月","9 個月"),B("3か月","3 個月"),B("1年半","1 年半"),B("6週間","6 週")],0),
+ mc("pc14",B("ファーストポップ（シナモンロースト）は焙煎開始から約？","第一爆約在開始後？"),[B("6〜9分","6〜9 分"),B("1〜3分","1〜3 分"),B("9〜13分","9〜13 分"),B("15分以上","15 分以上")],0),
+ mc("pc15",B("13分を過ぎ豆の温度が何℃を超えるとダークロースト？","超過 13 分、豆溫超過幾度是深焙？"),["232℃","180℃","200℃","260℃"],0),
+ mu("pc16",B("カフェイン除去の方法として電車版に載っているものを全て選んで","選出電車版列出的去咖啡因方法"),["ダイレクトコンタクト法","スイスウォータープロセス","二酸化炭素抽出法","窒素置換法"],[0,1,2]),
+ tf("pc17",B("FY26 の変更で DHO・DES のカフェイン除去は「水」のみの方法になった。","FY26 起 DHO・DES 改用只用水的方法去咖啡因。"),true,B("変更前は水＋二酸化炭素。90%以上除去。","變更前是水＋二氧化碳。去除 90% 以上。")),
+ mc("pc18",B("エイジングについて正しいのは？","關於陳年何者正確？"),[B("インドネシア産の生豆を3〜5年、シンガポールで","印尼生豆在新加坡放 3〜5 年"),B("焙煎後の豆を1年熟成","烘焙後放 1 年"),B("アフリカ産をスイスで5年","非洲豆在瑞士放 5 年"),B("生豆を6か月、シアトルで","生豆在西雅圖放 6 個月")],0),
+ mc("pc19",B("ポストローストブレンドの代表的なコア豆は？","後混式綜合的代表コア豆？"),["VER","HOU","EDB","BRK"],0),
+ mc("pc20",B("コロンビアやケニアの一部の第2の収穫期の呼び名は？","哥倫比亞與部分肯亞的第二收成期叫？"),["フライクロップ／ミタカ","ハーベスト／ピッキング","ソルジャー／バタフライ","ウェットハル／ギリンバサ"],0)
+];
+const BREW=[
+ ma("bw1",[["コーヒープレス","13番"],["サイフォン","8番"],["カッピング","3番"],["kMix","7番"],["ソロフィルター","5番"]],B("器具と挽き具合（マルコニック）を組み合わせよう","把器具和研磨刻度配對")),
+ mc("bw2",B("この挽き具合（粗挽き #13）を使う器具は？","這個研磨度（粗研磨 #13）用在哪個器具？"),["コーヒープレス","エスプレッソ","ターキッシュ","カッピング"],0,null,"grind:13"),
+ mc("bw3",B("この挽き具合（極細 #3）はどれ？","這個研磨度（極細 #3）是？"),["エスプレッソ","コーヒープレス","ステンレスコーンフィルター","CB ストレーナー"],0,null,"grind:3"),
+ mc("bw4",B("グラスドリップの推奨の挽き具合は？","玻璃滴濾推薦的研磨度？"),["8番","10番","13番","5番"],0,B("ステンレスコーンフィルターは推奨10番。","不鏽鋼濾杯才是推薦 10 號。"),"grind:8"),
+ mc("bw5",B("ORIGAMI の出来高は？","ORIGAMI 的萃取量？"),["140 ml","120 ml","180 ml","200 ml"],0),
+ mc("bw6",B("VIA の「VIA」の意味と推奨の出来高は？","VIA 的意思與建議沖泡量？"),[B("道・約180 ml","道路・約 180 ml"),B("命・約140 ml","生命・約 140 ml"),B("旅・約240 ml","旅行・約 240 ml"),B("光・約180 ml","光・約 180 ml")],0),
+ mc("bw7",B("コーヒープレスの抽出時間は？","法式濾壓壺的浸泡時間？"),[B("4分","4 分鐘"),B("2分","2 分鐘"),B("6分","6 分鐘"),B("30秒","30 秒")],0),
+ mc("bw8",B("家庭用コーヒープレス（小・300ml）の粉の量は？","家用濾壓壺（小 300ml）的粉量？"),["17 g","20 g","10 g","30 g"],0,B("店舗の小は 20 g。","門市用小號是 20 g。")),
+ mc("bw9",B("コールドブリューストレーナーの粉と水は？","冷萃濾袋的粉量與水量？"),[B("80 g・720 ml・冷蔵庫12時間","80 g・720 ml・冷藏 12 小時"),B("50 g・630 ml・常温14時間","50 g・630 ml・常溫 14 小時"),B("20 g・180 ml・冷蔵庫8時間","20 g・180 ml・冷藏 8 小時"),B("100 g・1 L・常温12時間","100 g・1 L・常溫 12 小時")],0),
+ mc("bw10",B("Clover Vertica の抽出方式は？","Clover Vertica 的萃取方式？"),[B("バキュームプレス方式","真空壓萃"),B("浸漬式","浸泡式"),B("高圧抽出","高壓萃取"),B("ドリップ式","滴濾式")],0),
+ ma("bw11",[["メリタ",B("1つ穴・1908年ドイツ","單孔・1908 德國")],["カリタ",B("台形・3つ穴","梯形・三孔")],["ハリオ",B("円錐・スパイラルリブ","錐形・螺旋肋")],["ORIGAMI",B("20のリブ・2019 WBC","20 道肋・2019 WBC")]],B("ドリッパーと特徴を組み合わせよう","把濾杯和特徵配對")),
+ mu("bw12",B("おいしいコーヒーをいれるための4つの基本を全て選んで","選出好咖啡的四個基本"),[B("分量","份量"),B("挽き具合","研磨度"),B("水","水"),B("鮮度","新鮮度"),B("器の色","杯子顏色")],[0,1,2,3]),
+ mc("bw13",B("水とコーヒーの割合は？","水與咖啡的比例？"),["180 ml : 10 g","150 ml : 15 g","200 ml : 8 g","250 ml : 10 g"],0),
+ mc("bw14",B("抽出に適した温度は？","適合萃取的溫度？"),["90〜96℃","80〜85℃","100℃","70〜80℃"],0),
+ mu("bw15",B("コーヒーの鮮度を損なう4つの敵を全て選んで","選出破壞新鮮度的四個敵人"),[B("酸素","氧氣"),B("光","光"),B("熱","熱"),B("湿気","濕氣"),B("音楽","音樂")],[0,1,2,3]),
+ ma("bw16",[["ミシェラ",B("コーヒー","咖啡豆")],["マチナチオネ",B("グラインダー","磨豆機")],["マキナ",B("マシン","機器")],["マノ",B("バリスタの手","咖啡師的手")]],B("エスプレッソの4つの M","濃縮咖啡的 4 個 M")),
+ mc("bw17",B("リストレットの特徴は？","Ristretto 的特色？"),[B("お湯が少なく、甘く、力強い風味が強まる","水少、較甜、風味更強"),B("お湯が多く、コクが薄い","水多、醇厚度變淡"),B("ミルクを多く加える","加大量牛奶"),B("抽出時間が倍","萃取時間加倍")],0),
+ mc("bw18",B("マストレーナ II で挽き具合をマシンに調節させるとき、ダブルショットを何回いれる？","Mastrena II 讓機器自動調整時要萃幾次雙份？"),[B("5回","5 次"),B("3回","3 次"),B("1回","1 次"),B("10回","10 次")],0),
+ ma("bw19",[["デミタス",B("4oz カップで気軽に","4oz 杯輕鬆試飲")],["ショート",B("短時間のフロアテイスティング","短時間現場試飲")],["トール",B("店頭販売の抽出器具を使って","用店售器具")],["グランデ",B("クイックコーヒーセミナー","快速咖啡講座")],["ベンティ",B("DC での計画的なセミナー","DC 合作講座")]],B("Fun!テのサイズと内容を組み合わせよう","把 Fun!テ 尺寸和內容配對")),
+ mc("bw20",B("このサイズ（いちばん大きいカップ）のファンテは？","這個尺寸（最大杯）的 Fun!テ 是？"),[B("DC で協力するテイスティングイベント","DC 合作的試飲活動"),B("4oz カップで気軽に","4oz 杯輕鬆試飲"),B("フロアテイスティング","現場試飲"),B("販売器具を使って","用店售器具")],0,null,"cups:4"),
+ mc("bw21",B("Reserve Coffee Day はいつ？","Reserve Coffee Day 是哪天？"),[B("毎月第2金曜日","每月第 2 個週五"),B("毎月20日","每月 20 日"),B("9月9日","9 月 9 日"),B("毎月1日","每月 1 日")],0),
+ mc("bw22",B("毎月20日は何の日？","每月 20 日是什麼日子？"),[B("エシカルなコーヒーの日","道德咖啡日"),B("Reserve Coffee Day","Reserve Coffee Day"),B("国際コーヒーデー","國際咖啡日"),B("99キャンペーン","99 活動")],0),
+ mc("bw23",B("EC885M の抽出気圧は？","EC885M 的萃取氣壓？"),["9 気圧","15 気圧","5 気圧","20 気圧"],0,B("最大 15 気圧。","最大 15 氣壓。")),
+ mc("bw24",B("ラテアートの「ロゼッタ」を考案したのは？","拉花「Rosetta」是誰發明的？"),["エスプレッソ ヴィヴァーチェ","カフェ アレグロ","イル・ジョルナーレ","ピーツ"],0),
+ mc("bw25",B("香りを学ぶためのおすすめコーヒーは？","學習「香氣」推薦的咖啡？"),["GUA・KEN・SUM","LNB・HOU・FRE","BRK・EDB・VER","ITA・ESP・FRE"],0),
+ mc("bw26",B("沸騰したお湯は約何秒待つと適温？","沸騰後約等幾秒到適溫？"),[B("30秒","30 秒"),B("5秒","5 秒"),B("2分","2 分"),B("10分","10 分")],0)
+];
+const HIST=[
+ ma("hs1",[["1971",B("1号店オープン","1 號店開幕")],["1984",B("初めてのラテ","第一杯拿鐵")],["1986",B("イル・ジョルナーレ","Il Giornale")],["1996",B("北米外初の東京","北美以外首店：東京")],["2014",B("初のリザーブ ロースタリー","第一家 Roastery")]],B("年と出来事を組み合わせよう","把年份和事件配對")),
+ mc("hs2",B("社名の由来となった小説は？","社名出自哪本小說？"),[B("白鯨","白鯨記"),B("老人と海","老人與海"),B("宝島","金銀島"),B("ロビンソン・クルーソー","魯賓遜漂流記")],0),
+ mu("hs3",B("スターバックスの創業者を全て選んで","選出星巴克的創辦人"),["ゴードン・バウカー","ゼブ・シーゲル","ジェリー・ボールドウィン","デイブ・オルセン"],[0,1,2]),
+ mc("hs4",B("1975年、カフェ アレグロのデイブ・オルセンが開発したのは？","1975 年 Dave Olsen 在 Cafe Allegro 開發的是？"),["ESP","HOU","EDB","VER"],0,B("公式模擬問題 Q3。","官方模擬題 Q3。")),
+ mc("hs5",B("1号店のロゴに入っている言葉は？","1 號店 logo 上的文字？"),["Starbucks Coffee Tea Spices","Starbucks Coffee Company","Starbucks Fresh Roasted","Starbucks Pike Place"],0),
+ tf("hs6",B("1号店では最初からコーヒーを1杯ずつ淹れて販売していた。","1 號店一開始就有賣現沖咖啡。"),false,B("陶器のカップで試飲だけできた。","只能用陶杯試飲。")),
+ mc("hs7",B("ハワード・シュルツがイタリアに出張したのは？","Howard Schultz 去義大利出差是哪年？"),["1983","1971","1987","1990"],0),
+ mc("hs8",B("自宅、職場に次ぐ場所のことを？","家、職場之外的地方叫？"),[B("サードプレイス","第三空間"),B("セカンドハウス","第二個家"),B("コミュニティハブ","社區中心"),B("リビングルーム","客廳")],0),
+ mc("hs9",B("伝説でコーヒーを発見したヤギ飼いの少年は？","傳說中發現咖啡的牧羊少年？"),["カルディ","モカ","カフワ","ババ・ブーダン"],0),
+ mc("hs10",B("ババ・ブーダンがイエメンから密輸した種は何粒？","Baba Budan 從葉門偷帶幾粒種子？"),[B("7粒","7 粒"),B("3粒","3 粒"),B("12粒","12 粒"),B("100粒","100 粒")],0),
+ mc("hs11",B("ヨーロッパ最初のコーヒーハウス（1645年）は？","歐洲第一家咖啡館（1645）在？"),[B("ベネチア","威尼斯"),B("ロンドン","倫敦"),B("パリ","巴黎"),B("ウィーン","維也納")],0),
+ mc("hs12",B("1ペニーで入れたロンドンのコーヒーハウスの呼び名は？","倫敦咖啡館的別稱？"),[B("ペニー大学","便士大學"),B("ペニーカフェ","便士咖啡"),B("ジェントルマンズクラブ","紳士俱樂部"),B("コーヒー議会","咖啡議會")],0),
+ mc("hs13",B("1966年、バークレーでクラフトコーヒーの潮流を始めたのは？","1966 年在柏克萊開啟精品咖啡潮流的是？"),["アルフレッド・ピート","ハワード・シュルツ","デイブ・オルセン","ゼブ・シーゲル"],0),
+ ma("hs14",[["1985",B("フレーバーロックバッグ","風味鎖袋")],["2008",B("パイクプレイスロースト","派克市場烘焙")],["2011",B("ブロンドロースト","黃金烘焙")],["2017",B("ブロンド エスプレッソ（カナダ）","黃金濃縮（加拿大）")]],B("年と出来事を組み合わせよう","把年份和事件配對")),
+ mc("hs15",B("1971年、ユーコンブレンドは誰のために作られた？","1971 年 Yukon 是為誰做的？"),[B("北太平洋遠洋漁船の船長","北太平洋遠洋漁船船長"),B("シアトルのレストラン","西雅圖餐廳"),B("シカゴの新店舗","芝加哥新店"),B("アラスカ航空","阿拉斯加航空")],0),
+ mc("hs16",B("VER はもともと何に合うように作られた？","VER 原本是為了搭配什麼？"),[B("レストランのチョコレートケーキ","餐廳的巧克力蛋糕"),B("感謝祭の料理","感恩節料理"),B("朝食","早餐"),B("和菓子","日式點心")],0,B("1975年 ジェイクオショーネシー。ジェイクスブレンド→80/20。","1975 年 Jake O'Shaughnessy's。")),
+ mc("hs17",B("1987年、シカゴ進出に合わせて発売されたブレンドは？","1987 年為了進軍芝加哥推出的綜合？"),["ゴールドコーストブレンド","ガゼボブレンド","ユーコンブレンド","アニバーサリーブレンド"],0),
+ mc("hs18",B("1714年、アムステルダム市長からコーヒーの木を献上されたのは？","1714 年獲贈咖啡樹的是？"),["ルイ14世","ナポレオン","マリー・アントワネット","ルイ16世"],0),
+ mc("hs19",B("日本のリザーブ1号店オープンは？","日本 Reserve 首店開幕日？"),["2011年2月23日","2014年12月4日","2019年2月28日","2017年4月1日"],0),
+ mc("hs20",B("リザーブ ロースタリーで、スピリッツと組み合わせたカクテルを作るのは？","Roastery 裡用烈酒做雞尾酒的人叫？"),["ミクロジスト","マスターロースター","カッパー","アグロノミスト"],0)
+];
+const ETH=[
+ mc("et1",B("1本のコーヒーの木から 250g 入りの豆は何袋分？","一棵咖啡樹可產幾袋 250g？"),[B("2袋","2 袋"),B("10袋","10 袋"),B("1袋未満","不到 1 袋"),B("25袋","25 袋")],0),
+ mc("et2",B("250g の豆で約何杯分？","250g 豆約可沖幾杯？"),[B("25杯","25 杯"),B("10杯","10 杯"),B("50杯","50 杯"),B("100杯","100 杯")],0),
+ mc("et3",B("ショートのラテ1杯に必要なコーヒーチェリーは？","一杯 Short 拿鐵需要幾顆櫻桃？"),[B("25粒","25 顆"),B("15粒","15 顆"),B("100粒","100 顆"),B("5粒","5 顆")],0),
+ mc("et4",B("タンブラーは何回くり返し使うとペーパーカップよりエコ？","隨行杯重複用幾次比紙杯環保？"),[B("7回","7 次"),B("2回","2 次"),B("30回","30 次"),B("100回","100 次")],0),
+ mc("et5",B("スターバックスの 2030 年の目標：CO₂・廃棄物・水を何%削減？","星巴克 2030 目標：減少 CO₂、廢棄物、用水多少？"),["50%","10%","20%","90%"],0),
+ mc("et6",B("店舗から出る廃棄物でいちばん多いのは？","門市廢棄物最多的是？"),[B("コーヒーの豆かす","咖啡渣"),B("カップ","杯子"),B("食べ残し","廚餘"),B("ミルクパック","牛奶盒")],0),
+ mc("et7",B("さび病にかかると葉にできる斑点の色は？","葉鏽病在葉子上的斑點顏色？"),[B("オレンジ","橘色"),B("黒","黑色"),B("白","白色"),B("紫","紫色")],0),
+ mc("et8",B("フェアトレードの本部がある国は？","公平貿易總部在哪國？"),[B("ドイツ","德國"),B("オランダ","荷蘭"),B("イギリス","英國"),B("スイス","瑞士")],0,B("ラベル運動が始まったのはオランダ（1988年）。","標章運動始於荷蘭（1988）。")),
+ mc("et9",B("日本のスターバックスがフェアトレード認証コーヒーを販売し始めたのは？","日本星巴克開始賣公平貿易咖啡是？"),["2002年","2000年","2015年","1996年"],0),
+ mc("et10",B("フェアトレード・プレミアムの25%以上を使うのは？","公平貿易獎勵金 25% 以上要用在？"),[B("品質の向上","提升品質"),B("広告","廣告"),B("輸送","運輸"),B("店舗づくり","開店")],0),
+ mc("et11",B("1987年ブルントラント報告書：「___のニーズを損なうことなく」","1987 布倫特蘭報告：「不損害___的需求」"),[B("将来の世代","未來世代"),B("過去の世代","過去世代"),B("開発途上国","開發中國家"),B("生産者","生產者")],0),
+ mc("et12",B("ルワンダの FSC で、マルチングによって防いでいるのは？","盧安達 FSC 用覆蓋法防止的是？"),[B("水分蒸発","水分蒸發"),B("害虫","害蟲"),B("霜","霜害"),B("土砂崩れ","土石流")],0),
+ mc("et13",B("アガセチェ（カゴ）の素材は？","Agaseke 籃子的材料？"),[B("麻","麻"),B("竹","竹"),B("コーヒーの枝","咖啡枝"),B("バナナの葉","香蕉葉")],0),
+ mc("et14",B("エシカルクイズ vol.5：豆かすの活用は？","道德小測驗 vol.5：咖啡渣怎麼用？"),[B("乳牛の飼料","乳牛飼料"),B("再生紙","再生紙"),B("もう1回抽出","再萃一次"),B("燃料","燃料")],0,B("トレイ、たい肥、壁材、脱臭剤にも。","也做托盤、堆肥、牆材、除臭劑。")),
+ mc("et15",B("DKD のカフェイン除去率は？","DKD 的咖啡因去除率？"),["97%","50%","99.9%","80%"],0),
+ mc("et16",B("カフェインの別名は？","咖啡因的別名？"),["トリメチルキサンチン","テオブロミン","クロロゲン酸","カテキン"],0),
+ mc("et17",B("Greener Stores Framework の基準はいくつ？","Greener Stores Framework 有幾個基準？"),["8","4","12","30"],0),
+ mc("et18",B("地球の水をお風呂1杯とすると、すぐ使える水は？","地球的水當作一缸浴缸水，能直接用的水有多少？"),[B("大さじ2杯","2 大匙"),B("マグカップ1杯","1 馬克杯"),B("バケツ3杯","3 桶"),B("コップ半分","半杯")],0),
+ mc("et19",B("2015年 COP21 で採択されたのは？","2015 年 COP21 通過的是？"),[B("パリ協定","巴黎協定"),B("京都議定書","京都議定書"),B("ブルントラント報告","布倫特蘭報告"),B("SDGs","SDGs")],0),
+ mc("et20",B("世界で毎年失われている森林は？","全球每年消失的森林面積？"),[B("1,400万ヘクタール","1,400 萬公頃"),B("14万ヘクタール","14 萬公頃"),B("40億ヘクタール","40 億公頃"),B("3,779万ヘクタール","3,779 萬公頃")],0),
+ tf("et21",B("エシカルクイズ vol.1 では、コーヒーは世界の約60か国で生産されていると答える。","道德小測驗 vol.1 的答案是約 60 國生產咖啡。"),true,B("他の章では約70か国。vol.1 の答えは60。","其他章節寫約 70 國，vol.1 答案是 60。"))
+];
+const BOSS=[
+ mc("bs1",B("C.A.F.E. について誤っているものは？","關於 C.A.F.E.，錯誤的是？"),[B("すべての農園から購入している","向所有農園購買"),B("児童労働の禁止は必須項目","禁止童工是必須項目"),B("継続的な向上を促す包括的アプローチ","促進持續改善的整體做法"),B("社会的責任は SCS が評価","社會責任由 SCS 評估")],0),
+ mc("bs2",B("ディカフェについて正しいものは？","關於低咖啡因何者正確？"),[B("変更前の DHO・DES は二酸化炭素抽出法だった","變更前 DHO・DES 用二氧化碳萃取法"),B("ORIGAMI・VIA の DHO は対象外","ORIGAMI、VIA 的 DHO 不在變更範圍"),B("ウォータープロセスは化学物質を使う","水處理法使用化學物質"),B("リザーブのディカフェも変更予定","Reserve 低咖啡因也要變更")],0),
+ mc("bs3",B("1975年、デイブ・オルセンが開発したコーヒーは？","1975 年 Dave Olsen 開發的是？"),["ESP","HOU","EDB","VER"],0),
+ fi("bs4","Our Environmental Promise：自然のめぐみを___な循環へ",["ポジティブ"],["未来への","持続的","豊か"]),
+ mc("bs5",B("2026/9/30〜10/2 に開催されたアジア太平洋 RBC の開催地は？","2026/9/30〜10/2 亞太 RBC 在哪舉辦？"),[B("フィリピン マニラ","菲律賓馬尼拉"),B("中国 上海","中國上海"),B("タイ バンコク","泰國曼谷"),B("ベトナム ハノイ","越南河內")],0),
+ mc("bs6",B("「クルミを思わせる香ばしさとハーブのような風味」は？","「核桃般的焦香與草本風味」是哪支？"),["CLG","LNB","HOU","TYO"],0),
+ mc("bs7",B("コーヒー豆の構造を外側から正しく並べると？","咖啡豆由外到內的正確順序？"),["果皮→果肉→ミューシレージ→パーチメント→シルバースキン→生豆","果皮→果肉→シルバースキン→ミューシレージ→パーチメント→生豆","果皮→果肉→パーチメント→シルバースキン→ミューシレージ→生豆"],0,null,"cherry:-1"),
+ mc("bs8",B("ORIGAMI の出来高は？","ORIGAMI 的萃取量？"),["140 ml","120 ml","180 ml"],0),
+ mc("bs9",B("ETH の生産国は？","ETH 的生產國是？"),["エチオピア","ケニア","ウガンダ","タンザニア"],0,null,"bag:ETH:BLONDE"),
+ mu("bs10",B("コーヒーの一生について正しいものを全て選んで","關於咖啡的一生，選出所有正確的"),[B("ジャスミンのような香りの白い花を咲かせる","開出茉莉香的白花"),B("収穫期は生産地によって異なる","收成期依產地不同"),B("すべての品種でチェリーは熟すと赤くなる","所有品種成熟都是紅色"),B("収穫時期には実をすべて一度に収穫する","收成時一次摘完")],[0,1]),
+ mu("bs11",B("スマトラのコーヒー栽培について正しいものを全て選んで","關於蘇門答臘咖啡栽培，選出所有正確的"),[B("農家が一次加工後ウェットハルで精製し、C.A.F.E. のトレーサビリティが機能","農家一次加工後以濕剝法精製，C.A.F.E. 可追溯性運作"),B("2015年開設の FSC は約14,000の農家を支援","2015 年開設的 FSC 支援約 14,000 農家"),B("ドライミルの次にウェットミルで加工","先乾處理廠再濕處理廠"),B("60kg の麻袋で空輸される","60kg 麻袋空運")],[0,1]),
+ mu("bs12",B("FY27 に開催中のコーヒーセミナーを全て選んで","選出 FY27 正在舉辦的咖啡講座"),[B("リザーブをはじめよう編","Reserve 入門篇"),B("生産地を旅するセミナー","產地之旅講座"),B("群馬県地域セミナー みなかみの森とコーヒー編","群馬縣地區講座 水上之森"),B("おいしい淹れ方編","美味沖煮篇")],[0,1,2]),
+ mu("bs13",B("SCTC の役割として正しいものを全て選んで","選出 SCTC 的正確角色"),[B("生産者やサプライヤーとの関係強化","強化與生產者、供應商的關係"),B("全サプライヤーとの取引関係の管理","管理所有供應商交易"),B("生産国から焙煎工場までの輸送","生產國到烘焙廠的運輸"),B("コーヒー生産コスト管理のサポート","生產成本管理支援")],[0,1,2])
+];
+const RESERVE=[
+ ma("rv1",[["Reserve Bar","BLACK EAGLE"],["Neighborhood Reserve Bar","Synesso"],["Experience Bar","Pour Over"],["Reserve Cafe","Mastrena II"]],B("リザーブの店舗タイプとマシン","Reserve 店型與機器配對")),
+ mc("rv2",B("リザーブのブランドコンセプトは？","Reserve 的品牌概念？"),["Curated by Our Coffee Passion","Every Cup Tells a Story","Coffee Beyond the Ordinary","Taste the Origin"],0),
+ mc("rv3",B("UME（ウガンダ）のコク／酸味は？","UME（烏干達）的醇厚／酸度？"),["FULL / HIGH","LIGHT / LOW","MEDIUM / MEDIUM","FULL / LOW"],0,B("ウガンダは「アフリカの真珠」。乾燥に温室を使う。","烏干達被稱為「非洲之珠」，用溫室乾燥。")),
+ mc("rv4",B("BFL（ボリビア フィンカ ラ リンダ）の加工のヒントになったのは？","BFL 的加工靈感來自？"),[B("ワイン造り（モスト発酵）","釀葡萄酒（Most 發酵）"),B("日本酒","日本酒"),B("ウイスキー樽","威士忌桶"),B("紅茶","紅茶")],0),
+ mc("rv5",B("GVV の農園は、スターバックスの何番目の自社農園？","GVV 的農園是星巴克第幾個自有農園？"),[B("3つの自社農園のひとつ（2024年取得）","3 個自有農園之一（2024 年取得）"),B("1つめ","第 1 個"),B("10番目","第 10 個"),B("自社農園ではない","不是自有農園")],0)
+];
+
+/* ============ sprint data (FY27 exam intel 2026-11) ============ */
+const ESPRESSO=[
+ ma("es1",[["ミシェラ",B("コーヒー","咖啡豆")],["マチナチオネ",B("グラインダー","磨豆機")],["マキナ",B("マシン","機器")],["マノ",B("バリスタの手","咖啡師的手")]],B("エスプレッソの4つの M を組み合わせよう","把濃縮咖啡的 4 個 M 配對")),
+ mc("es2",B("理想的なエスプレッソショットのたとえは？","理想濃縮咖啡的比喻是？"),[B("スプーンから注がれる温かいはちみつ","從湯匙流下的溫熱蜂蜜"),B("蛇口から流れる水","從水龍頭流出的水"),B("溶けたチョコレート","融化的巧克力"),B("冷たいメープルシロップ","冰涼的楓糖漿")],0),
+ mc("es3",B("エスプレッソをいれる正しい手順は？","沖煮濃縮咖啡的正確順序？"),[B("挽き具合 → 分量 → タンピング → 抽出","研磨 → 份量 → 填壓 → 萃取"),B("分量 → 挽き具合 → 抽出 → タンピング","份量 → 研磨 → 萃取 → 填壓"),B("タンピング → 挽き具合 → 分量 → 抽出","填壓 → 研磨 → 份量 → 萃取"),B("挽き具合 → タンピング → 分量 → 抽出","研磨 → 填壓 → 份量 → 萃取")],0),
+ mc("es4",B("エスプレッソの挽き具合は？","濃縮咖啡的研磨度？"),[B("極細挽き（#3）","極細（#3）"),B("中細挽き（#7）","中細（#7）"),B("中挽き（#10）","中研磨（#10）"),B("粗挽き（#13）","粗研磨（#13）")],0,null,"grind:3"),
+ mc("es5",B("ショットの抽出が速すぎるとき、考えられる原因は？","萃取太快時，可能的原因是？"),[B("挽き具合が粗すぎる","研磨太粗"),B("挽き具合が細かすぎる","研磨太細"),B("豆の量が多すぎる","粉量太多"),B("水温が高すぎる","水溫太高")],0),
+ mc("es6",B("抽出してから時間がたつと消えてしまうものは？","萃取後放久了會消失的是？"),[B("クレマ","克麗瑪"),B("カフェイン","咖啡因"),B("酸味","酸味"),B("ボディ","醇厚度")],0),
+ mc("es7",B("エスプレッソショットの3つの層は？","濃縮咖啡的三層是？"),["クレマ・ボディ・ハート","クレマ・フォーム・ミルク","トップ・ミドル・ボトム","アロマ・ボディ・アフター"],0),
+ mc("es8",B("リストレットの特徴は？","Ristretto 的特色？"),[B("お湯が少なく、甘く、風味が強まる","水少、較甜、風味更強"),B("お湯が多く、コクが薄く、風味が弱まる","水多、醇厚變淡、風味變弱"),B("2倍の量の豆を使う","用 2 倍的豆子"),B("ミルクを先に入れる","先加牛奶")],0),
+ mc("es9",B("ロングショットの特徴は？","Long shot 的特色？"),[B("お湯が多く、コクが薄く、風味が弱まる","水多、醇厚變淡、風味變弱"),B("お湯が少なく、甘く、風味が強まる","水少、較甜、風味更強"),B("抽出時間が半分になる","萃取時間減半"),B("クレマが厚くなる","克麗瑪變厚")],0),
+ mc("es10",B("マストレーナで挽き具合を確認するとき、ダブルショットを何回いれて平均を見る？","Mastrena 確認研磨度時，雙份要萃幾次取平均？"),[B("3回","3 次"),B("5回","5 次"),B("1回","1 次"),B("10回","10 次")],0,B("マストレーナ II はスターシンボルを見ながら 5 回。","Mastrena II 是看星星標誌、萃 5 次。")),
+ mc("es11",B("マストレーナ II で挽き具合をマシンに調整させるとき、ダブルショットは何回？","Mastrena II 讓機器自動調整時要萃幾次雙份？"),[B("5回","5 次"),B("3回","3 次"),B("2回","2 次"),B("8回","8 次")],0),
+ mc("es12",B("ラテアートの発祥の国は？","拉花發源於哪個國家？"),[B("イタリア","義大利"),B("アメリカ","美國"),B("フランス","法國"),B("オーストラリア","澳洲")],0),
+ mc("es13",B("ラテアートの「ロゼッタ」を考案したのは？","拉花「Rosetta」是誰發明的？"),["エスプレッソ ヴィヴァーチェ","カフェ アレグロ","イル・ジョルナーレ","ピーツ コーヒー"],0),
+ mc("es14",B("ミルクのタンパク質が変性しはじめる温度は？","牛奶蛋白質開始變性的溫度？"),["38℃","20℃","60℃","75℃"],0),
+ mu("es15",B("きめ細かいミルクの泡に関わるミルクの成分を全て選んで","選出與細緻奶泡有關的牛奶成分"),[B("糖分","糖分"),B("脂肪分","脂肪"),B("タンパク質","蛋白質"),B("カフェイン","咖啡因")],[0,1,2]),
+ mu("es16",B("ラテアートの審査基準を全て選んで","選出拉花的評分基準"),[B("コントラスト","對比"),B("左右対称","左右對稱"),B("難易度","難易度"),B("抽出時間","萃取時間")],[0,1,2],B("審査基準：コントラスト・中心・左右対称・難易度・全体","評分：對比・中心・左右對稱・難易度・整體")),
+ mu("es17",B("ラテアートのデザイン要素を全て選んで","選出拉花的設計要素"),[B("流れ","流速"),B("距離","距離"),B("位置","位置"),B("カップの色","杯子顏色")],[0,1,2]),
+ mc("es18",B("ラテアートの向きはどうそろえる？","拉花圖案的方向要怎麼對齊？"),[B("カップの取っ手とロゴにそろえる","對齊杯把和 logo"),B("お客様から見て逆さに","從客人看是倒的"),B("毎回ランダムに","每次隨意"),B("バリスタの利き手側に","對著咖啡師慣用手")],0),
+ mc("es19",B("3つの T に含まれないものは？","哪一個不在 3 個 T 裡？"),[B("タンピング","填壓"),B("温度","溫度"),B("ホールディングタイム","接觸時間"),B("乱流（Turbulence）","亂流")],0),
+ mc("es20",B("1975年、ESP（エスプレッソ ロースト）を開発したのは？","1975 年開發 ESP 的是？"),[B("カフェ アレグロのデイブ・オルセン","Cafe Allegro 的 Dave Olsen"),B("イル・ジョルナーレのハワード・シュルツ","Il Giornale 的 Howard Schultz"),B("ピーツのアルフレッド・ピート","Peet's 的 Alfred Peet"),B("1号店のゼブ・シーゲル","1 號店的 Zev Siegl")],0),
+ mc("es21",B("ESP のキーワードは？","ESP 的キーワード？"),["Rich Molasses & Caramel","Dark Caramel & Sweet Smoke","Dark Cocoa & Toasted Marshmallow","Candied Apple & Bittersweet Chocolate"],0,null,"bag:ESP:DARK"),
+ mc("es22",B("ESP のパッケージのシルバーが表しているものは？","ESP 包裝的銀色代表什麼？"),[B("クレマ","克麗瑪"),B("ミルクの泡","奶泡"),B("焙煎機","烘豆機"),B("イタリアの街並み","義大利街景")],0),
+ mc("es23",B("ESP はどちらのブレンド？","ESP 是哪一種綜合方式？"),[B("プレローストブレンド","先混後烘"),B("ポストローストブレンド","先烘後混")],0,B("ポストローストの代表は VER。","後混式的代表是 VER。")),
+ mc("es24",B("BEB（ブロンド エスプレッソ）のキーワードは？","BEB 的キーワード？"),["Candied Apple & Bittersweet Chocolate","Rich Molasses & Caramel","Toasted Malt & Milk Chocolate","Juicy Citrus & Chocolate"],0,null,"bag:BEB:BLONDE"),
+ mc("es25",B("BEB が北米で初めて登場したのは？","BEB 第一次在北美登場是？"),[B("2017年 カナダ","2017 年 加拿大"),B("2011年 アメリカ","2011 年 美國"),B("2019年 日本","2019 年 日本"),B("2008年 カナダ","2008 年 加拿大")],0),
+ tf("es26",B("ESP→BEB へのエスプレッソの変更は無料。","ESP 換 BEB 不加價。"),true),
+ tf("es27",B("ESP は店内でドリップコーヒーとして提供できる。","ESP 可以在店內做成滴濾咖啡提供。"),false,B("ESP/DES は店内ドリップ不可。","ESP/DES 不能做店內滴濾。")),
+ mc("es28",B("量り売りで ESP を出すときに使うのは？","秤重販售 ESP 時從哪裡取？"),[B("5lb のバッグ","5 磅袋"),B("250g プレパック","250g 預包裝"),B("どちらでも可","兩種都可"),B("量り売り不可","不能秤重販售")],0),
+ mc("es29",B("XME（クリスマスブレンド エスプレッソ）のキーワードは？","XME 的キーワード？"),["Sugar Plum & Smoked Vanilla","Spiced Orange & Fig Compote","Toasted Sugar & Rich Walnut","Rich Molasses & Caramel"],0),
+ mc("es30",B("EC885M で 1 杯（30ml）を抽出するのにかかる理想の時間は？","EC885M 萃 1 杯（30ml）理想時間？"),[B("約20秒","約 20 秒"),B("約5秒","約 5 秒"),B("約60秒","約 60 秒"),B("約2分","約 2 分")],0,B("9気圧・90℃。最大 15 気圧。","9 氣壓・90℃，最大 15 氣壓。")),
+ mc("es31",B("初めてのスターバックスラテが提供されたのは？","第一杯星巴克拿鐵是什麼時候？"),[B("1984年4月","1984 年 4 月"),B("1971年3月","1971 年 3 月"),B("1987年8月","1987 年 8 月"),B("1996年8月","1996 年 8 月")],0),
+ mc("es32",B("Reserve Bar で使われているエスプレッソマシンは？","Reserve Bar 使用的濃縮咖啡機？"),["BLACK EAGLE","Synesso","Mastrena II","Clover"],0),
+ mc("es33",B("エスプレッソ方式でいれる家庭用器具（イタリア・ビアレッティ）は？","用濃縮方式沖煮的家用器具（義大利 Bialetti）？"),[B("モカポット","摩卡壺"),B("サイフォン","虹吸壺"),B("パーコレーター","渗濾壺"),B("エアロプレス","愛樂壓")],0),
+ mc("es34",B("「4つの M」でバリスタの役割にあたるのは？","「4 個 M」中代表咖啡師的是？"),["マノ","マキナ","ミシェラ","マチナチオネ"],0)
+];
+
+const PK=[
+ ["ETH","Tangerine & Lemon Balm",B("オレンジ・バニラ・ミント・ジンジャー","柳橙・香草・薄荷・薑"),"水洗"],
+ ["GCC","Meyer Lemon & Cocoa Nibs",B("ナッツ・ソフトチーズ・シトラス","堅果・軟起司・柑橘"),"水洗"],
+ ["SSB","Honeybush & Cocoa",B("さくら・バニラ・チョコレート","櫻花・香草・巧克力"),"水洗・半水洗・乾燥"],
+ ["KLB","Chocolate Nougat & Macadamia",B("キャラメル・バター風味のペストリー・トロピカル","焦糖・奶油酥皮・熱帶水果"),"水洗"],
+ ["ICB","Brown Sugar & Milk Chocolate",B("キャラメル・ミルクチョコ・ピーナッツバター","焦糖・牛奶巧克力・花生醬"),"水洗・乾燥"],
+ ["EAB","Grapefruit, Honeysuckle & Red Berries",B("シトラス・チョコレート","柑橘・巧克力"),"水洗・乾燥"],
+ ["SMD","Juicy Watermelon & SENCHA",B("トロピカル・ハーブ・バニラ・ベリー","熱帶水果・香草植物・香草・莓果"),"水洗・乾燥"],
+ ["EDR","Toasted Sugar & Rich Walnut",B("ダークチョコ・キャラメル","黑巧克力・焦糖"),"水洗・半水洗"],
+ ["AUB","Candied Pecan & Sage",B("ハーブ・チーズ","香草植物・起司"),"水洗・半水洗"],
+ ["HAC","Candied Citrus & Milk Chocolate",B("はちみつ・アーモンド","蜂蜜・杏仁"),"水洗"],
+ ["XMB","Spiced Orange & Fig Compote",B("シトラス・ベリークランブル","柑橘・莓果酥"),"水洗・半水洗・乾燥"],
+ ["XME","Sugar Plum & Smoked Vanilla",B("ダークチョコ・ベーキングスパイス","黑巧克力・烘焙香料"),"水洗・半水洗・乾燥"]
+];
+const PNAME={};PROMO.forEach(p=>PNAME[p[0]]=p[1]);
+function genPromo2(){
+ const q=[];const kws=PK.map(p=>p[1]),fl=PK.map(p=>p[2]),pcs=["水洗","水洗・乾燥","水洗・半水洗","水洗・半水洗・乾燥"];
+ PK.forEach((p,i)=>{
+  q.push(mc("pk1-"+p[0],B(`キーワード「${p[1]}」のプロモ豆は？`,`キーワード「${p[1]}」是哪支プロモ豆？`),[p[0],...seeded(PK.map(x=>x[0]).filter(c=>c!==p[0]),i+5,3)],0));
+  q.push(mc("pk2-"+p[0],B(`${p[0]}（${PNAME[p[0]]}）のキーワードは？`,`${p[0]}（${PNAME[p[0]]}）的キーワード？`),[p[1],...seeded(kws.filter(k=>k!==p[1]),i+11,3)],0));
+  q.push(mc("pk3-"+p[0],B(`${p[0]}（${PNAME[p[0]]}）と相性のよいフレーバーは？`,`${p[0]}（${PNAME[p[0]]}）適合搭配的風味？`),[p[2],...seeded(fl.filter(k=>k!==p[2]),i+17,3)],0));
+  q.push(mc("pk4-"+p[0],B(`${p[0]}（${PNAME[p[0]]}）の加工法は？`,`${p[0]}（${PNAME[p[0]]}）的加工法？`),pcs,pcs.indexOf(p[3])));
+ });
+ for(let k=0;k<3;k++){const rs=seeded(PK,k*19+3,4);q.push(ma("pkm"+k,rs.map(r=>[r[0],r[1]]),B("プロモ豆とキーワードを組み合わせよう","把プロモ豆和キーワード配對")))}
+ q.push(ma("pkmap",[["KLB コペラニ",B("ハワイ島 コナ","夏威夷島 科納")],["SMD マサ デパン",B("スマトラ島","蘇門答臘島")],["HAC アルサシア",B("コスタリカ ポアス火山","哥斯大黎加 波阿斯火山")]],B("プロモ豆と産地を組み合わせよう","把プロモ豆和產地配對")));
+ q.push(mu("pkb",B("BLONDE ロースト のプロモ豆を全て選んで","選出所有 BLONDE 烘焙的プロモ豆"),["ETH","EAB","SMD","GCC"],[0,1,2],B("XMB も BLONDE。GCC は MEDIUM。","XMB 也是 BLONDE，GCC 是 MEDIUM。")));
+ q.push(mu("pkd",B("DARK ロースト のプロモ豆を全て選んで","選出所有 DARK 烘焙的プロモ豆"),["EDR","AUB","XME","HAC"],[0,1,2],B("XMA・DXM も DARK。HAC は MEDIUM。","XMA、DXM 也是 DARK，HAC 是 MEDIUM。")));
+ q.push(mu("pkh",B("HOT のみで提供されるプロモ豆を全て選んで","選出只提供 HOT 的プロモ豆"),["EDR","AUB","ICB","SMD"],[0,1],B("ICB は ICED のみ、SMD は HOT・ICED。","ICB 只有 ICED，SMD 冷熱都有。")));
+ q.push(mc("pks1",B("SMD のパッケージの「白とシルバー」が表すものは？","SMD 包裝的「白與銀」代表什麼？"),[B("太陽と水","太陽與水"),B("雪と月","雪與月"),B("雲と雨","雲與雨"),B("米と塩","米與鹽")],0));
+ q.push(mc("pks2",B("SMD のパッケージのライトグリーンが表すものは？","SMD 包裝的淺綠色代表什麼？"),[B("コーヒーの未来を担う若い生産者","擔起咖啡未來的年輕生產者"),B("スマトラの熱帯雨林","蘇門答臘雨林"),B("煎茶","煎茶"),B("日本30周年のロゴ","日本 30 周年 logo")],0));
+ q.push(mc("pks3",B("SMD を焙煎した場所は？","SMD 在哪裡烘焙？"),[B("ロースタリー東京","東京烘焙工坊"),B("シアトルのロースト工場","西雅圖烘焙廠"),B("アムステルダム","阿姆斯特丹"),B("ワハナ エステート","Wahana 莊園")],0));
+ q.push(mc("pks4",B("SMD のテーマ「Let's Brew the Future」のもう一つのキーワードは？","SMD「Let's Brew the Future」的另一個關鍵字？"),[B("共創","共創"),B("伝統","傳統"),B("感謝","感謝"),B("挑戦","挑戰")],0));
+ q.push(mc("pks5",B("EDR の開発にかかった期間と試作の回数は？","EDR 開發期間與試作次數？"),[B("8か月・40回","8 個月・40 次"),B("1年・80回","1 年・80 次"),B("3か月・25回","3 個月・25 次"),B("2年・100回","2 年・100 次")],0));
+ q.push(mc("pks6",B("EDR に使われている産地は？","EDR 使用的產地？"),[B("スマトラ・コロンビア・ブラジル","蘇門答臘・哥倫比亞・巴西"),B("グアテマラ・インドネシア・エチオピア","瓜地馬拉・印尼・衣索比亞"),B("ケニア・エチオピア","肯亞・衣索比亞"),B("コスタリカのみ","只有哥斯大黎加")],0));
+ q.push(mc("pks7",B("KLB コペラニとコラボした航空会社は？","KLB 合作的航空公司？"),[B("アラスカ・ホライズン航空","阿拉斯加・地平線航空"),B("ハワイアン航空","夏威夷航空"),B("JAL","日本航空"),B("ユナイテッド航空","聯合航空")],0));
+ q.push(mc("pks8",B("KLB コペラニの登場は今回で何回目？","KLB 這次是第幾次登場？"),[B("2回目（FY19 サマー以来）","第 2 次（FY19 夏季以來）"),B("初登場","首次登場"),B("3回目","第 3 次"),B("毎年販売","每年都賣")],0));
+ q.push(mc("pks9",B("AUB オータムブレンドが日本で発売されたのは？","AUB 在日本發售是？"),[B("2011年10月","2011 年 10 月"),B("2008年9月","2008 年 9 月"),B("2015年11月","2015 年 11 月"),B("1996年10月","1996 年 10 月")],0,B("北米でも 2011 年。感謝祭の料理に合うブレンド。","北美也是 2011 年，搭配感恩節料理。")));
+ q.push(mc("pks10",B("HAC ハシエンダ アルサシアはどんな農園のコーヒー？","HAC 是什麼樣的農園的咖啡？"),[B("スターバックスの自社農園","星巴克自有農園"),B("フェアトレード協同組合","公平貿易合作社"),B("小規模農家の共同ブランド","小農共同品牌"),B("WCR の研究農場","WCR 研究農場")],0));
+ q.push(mc("pks11",B("GCC カシシエロのパッケージのモチーフは？","GCC 包裝的靈感？"),[B("19世紀日本の木版画","19 世紀日本木版畫"),B("マヤ文明の壁画","馬雅壁畫"),B("グアテマラの織物","瓜地馬拉織品"),B("ケツァール","格查爾鳥")],0));
+ q.push(mc("pks12",B("GCC カシシエロはどこのために開発された？","GCC 是為誰開發的？"),[B("2004年 シアトルのレストラン Canlis","2004 年西雅圖餐廳 Canlis"),B("1975年 ジェイクオショーネシー","1975 年 Jake O'Shaughnessy's"),B("2006年 テラッツァ","2006 年 Terraza"),B("1987年 シカゴの新店舗","1987 年芝加哥新店")],0));
+ q.push(mc("pks13",B("ETH のパッケージに描かれているポットは？","ETH 包裝上的壺？"),[B("ジャバナ（もてなしの象徴）","Jebena（款待的象徵）"),B("モカポット","摩卡壺"),B("イブリック","土耳其壺"),B("サイフォン","虹吸壺")],0));
+ q.push(mc("pks14",B("XMA に使われている特別な豆は？","XMA 使用的特別豆子？"),[B("エイジドスマトラ","陳年蘇門答臘"),B("コナ","科納"),B("ゲイシャ","藝妓"),B("ピーベリー","圓豆")],0));
+ q.push(mc("pks15",B("DXM（ディカフェ クリスマスブレンド）のカフェイン除去方法は？","DXM 的去咖啡因方法？"),[B("ウォータープロセス","水處理法"),B("二酸化炭素抽出法","二氧化碳萃取法"),B("ダイレクトコンタクト法","直接接觸法"),B("窒素置換法","氮氣置換法")],0));
+ q.push(mc("pks16",B("ICB アイスコーヒーブレンドは、テラッツァ発売から今年で何年？","ICB 從 Terraza 發售到今年幾年？"),[B("20年","20 年"),B("10年","10 年"),B("30年","30 年"),B("15年","15 年")],0));
+ return q;
+}
+
+const TRAP=[
+ tf("tr1",B("SMD の加工法は水洗式のみ。","SMD 只用水洗式加工。"),false,B("水洗式・乾燥式。","水洗式與乾燥式。")),
+ tf("tr2",B("KLB にはコナコーヒーが15%含まれている。","KLB 含 15% 科納咖啡。"),false,B("10%。","10%。")),
+ tf("tr3",B("EAB は2025年に BLONDE から MEDIUM に変わった。","EAB 在 2025 年從 BLONDE 改成 MEDIUM。"),false,B("MEDIUM → BLONDE の順。","是 MEDIUM → BLONDE。")),
+ tf("tr4",B("XMB は2012年に開発され、2020年から今のレシピになった。","XMB 2012 年開發，2020 年起是現行配方。"),true),
+ tf("tr5",B("EDR は期間限定で、終了後は販売されない。","EDR 是期間限定，結束後不再販售。"),false,B("コア豆として販売が続く。","會作為コア豆繼續販售。")),
+ tf("tr6",B("DXM は昨年も販売されていた。","DXM 去年也有販售。"),false,B("今年初登場。昨年はディカフェ ホリデー。","今年首次登場，去年是ディカフェ ホリデー。")),
+ tf("tr7",B("ESP はポストローストブレンドである。","ESP 是先烘後混的綜合。"),false,B("プレロースト。ポストの代表は VER。","是先混後烘，後混代表是 VER。")),
+ tf("tr8",B("ESP→BEB の変更には追加料金がかかる。","ESP 換 BEB 要加價。"),false,B("無料。","不加價。")),
+ tf("tr9",B("リストレットはロングショットよりお湯の量が多い。","Ristretto 的水量比 Long shot 多。"),false),
+ tf("tr10",B("ミルクのタンパク質は38℃で変性しはじめる。","牛奶蛋白質在 38℃ 開始變性。"),true),
+ tf("tr11",B("マストレーナ II では、ダブルショットを3回いれて挽き具合を確認する。","Mastrena II 萃 3 次雙份確認研磨。"),false,B("5回。3回はマストレーナ。","5 次。3 次是舊款 Mastrena。")),
+ tf("tr12",B("C.A.F.E. の必須条件は「品質基準」と「社会的責任」。","C.A.F.E. 的必須條件是品質基準與社會責任。"),false,B("品質基準と経済的な透明性。","品質基準與經濟透明。")),
+ tf("tr13",B("フェアトレードの本部はオランダにある。","公平貿易總部在荷蘭。"),false,B("本部はドイツ。ラベル運動の発祥がオランダ。","總部在德國，標章運動發源於荷蘭。")),
+ tf("tr14",B("エシカル調達 99% を達成したのは2015年4月。","道德採購 99% 是 2015 年 4 月達成。"),true),
+ tf("tr15",B("SCTC はコーヒー生産コスト管理をサポートする。","SCTC 支援生產成本管理。"),false,B("それは FSC の領域。","那是 FSC 的工作。")),
+ tf("tr16",B("C.A.F.E. の社会的責任と環境リーダーシップは SCS が評価する。","C.A.F.E. 的社會責任與環境領導由 SCS 評估。"),true),
+ tf("tr17",B("「水域の保護」は C.A.F.E. の社会的責任の指標。","「水域保護」是社會責任的指標。"),false,B("環境面でのリーダーシップ。","屬於環境領導。")),
+ tf("tr18",B("スターバックスは C.A.F.E. を実践するすべての農園から購入している。","星巴克向所有實行 C.A.F.E. 的農園購買。"),false),
+ tf("tr19",B("LNB は店内で HOT・ICE ともにドリップ提供できる。","LNB 店內冷熱滴濾都可以。"),false,B("HOT のみ。","只有 HOT。")),
+ tf("tr20",B("ITA の店内ドリップは HOT のみ。","ITA 店內滴濾只有 HOT。"),false,B("ICE のみ。","只有 ICE。")),
+ tf("tr21",B("CLG のキーワードは Toasted Walnut & Herbs。","CLG 的キーワード是 Toasted Walnut & Herbs。"),true),
+ tf("tr22",B("TYO の加工法は水洗式のみ。","TYO 只用水洗式。"),false,B("水洗式＋半水洗式。","水洗＋半水洗。")),
+ tf("tr23",B("FRE のコクは FULL。","FRE 的醇厚度是 FULL。"),false,B("LIGHT。","LIGHT。")),
+ tf("tr24",B("DHO・DES のカフェイン除去には、現在も水と二酸化炭素を使っている。","DHO・DES 現在仍用水＋二氧化碳去咖啡因。"),false,B("現在は水のみ（ウォータープロセス）。","現在只用水。")),
+ tf("tr25",B("HAC はスターバックスの自社農園のコーヒー。","HAC 是星巴克自有農園的咖啡。"),true),
+ tf("tr26",B("ETH は DARK ロースト。","ETH 是 DARK 烘焙。"),false,B("BLONDE。","BLONDE。")),
+ tf("tr27",B("エスプレッソの抽出が速すぎるのは、挽き具合が細かすぎるから。","萃取太快是因為磨得太細。"),false,B("粗すぎるから。","是太粗。")),
+ tf("tr28",B("BEB は2017年にカナダで北米初登場した。","BEB 2017 年在加拿大首次登場北美。"),true),
+ tf("tr29",B("GCC カシシエロは BLONDE ロースト。","GCC 是 BLONDE 烘焙。"),false,B("MEDIUM。","MEDIUM。")),
+ tf("tr30",B("ICB は HOT と ICED の両方で提供される。","ICB 冷熱都提供。"),false,B("ICED のみ。","只有 ICED。"))
+];
+
+const UNITS=[
+ {id:"d1",icon:"cup",col:"#6b3f1f",t:B("Day 1 エスプレッソ","Day 1 濃縮咖啡"),s:B("4つのM・ショット・ラテアート","4M・萃取・拉花"),pool:()=>ESPRESSO},
+ {id:"d2",icon:"star",col:"#f0a92b",t:B("Day 2 プロモ豆①","Day 2 プロモ豆①"),s:B("3レター・ロースト・ストーリー","代碼・烘焙・故事"),pool:genPromo},
+ {id:"d3",icon:"tag",col:"#d9822b",t:B("Day 3 プロモ豆②","Day 3 プロモ豆②"),s:B("キーワード・相性・加工法","關鍵字・搭配・加工"),pool:genPromo2},
+ {id:"d4",icon:"bag",col:"#2f9e63",t:B("Day 4 コア豆","Day 4 コア豆"),s:B("17種類を総まとめ","17 支總整理"),pool:()=>[...genCoreBasic(),...genCoreKey(),...genCoreDetail()]},
+ {id:"d5",icon:"leaf",col:"#2f8f6a",t:B("Day 5 倫理的な調達","Day 5 道德採購"),s:B("C.A.F.E.・FSC・フェアトレード","C.A.F.E.・FSC・公平貿易"),pool:()=>[...CAFE,...ORIGIN,...ETH]},
+ {id:"d6",icon:"bolt",col:"#7a5bd0",t:B("Day 6 ひっかけ○×","Day 6 陷阱○×"),s:B("微妙な選択肢を見抜く","看穿相似選項"),pool:()=>TRAP},
+ {id:"d7",icon:"trophy",col:"#d4a017",t:B("Day 7 総仕上げ 20問","Day 7 總複習 20 題"),s:B("4分野からランダム出題","4 大重點隨機出題"),n:20,pool:()=>[...POOLS.d1,...POOLS.d2,...POOLS.d3,...POOLS.d4,...POOLS.d5,...POOLS.d6]},
+ {id:"bs",icon:"trophy",col:"#a8801a",t:B("公式模擬問題","官方模擬題"),s:B("電車版の13問","電車版 13 題"),pool:()=>BOSS,boss:true}
+];
+const POOLS={};UNITS.forEach(u=>POOLS[u.id]=u.pool());
+const ALLQ={};Object.values(POOLS).flat().forEach(q=>ALLQ[q.id]=q);
+
+/* ============ app state ============ */
+const app=document.getElementById("app");
+let G=null; // current lesson
+const HEARTS=5;
+
+function header(){
+ const st=streak();
+ return `<div class="top">
+  <div class="stat" title="streak">${svgI.fire}<span>${st}</span></div>
+  <div class="stat" title="XP">${svgI.gem}<span>${S.xp}</span></div>
+  <div class="grow"></div>
+  
+  <button class="iconbtn" id="nbb" aria-label="notebook">${svgI.nb}</button>
+  <button class="iconbtn" id="snd" aria-label="sound">${S.sound?svgI.sound:svgI.mute}</button>
+ </div>`;
+}
+function bindHeader(){
+ const nb=app.querySelector("#nbb");if(nb)nb.onclick=notebook;
+ const s=app.querySelector("#snd");if(s)s.onclick=()=>{S.sound=!S.sound;save();home()};
+}
+function ring(n,col){const p=Math.min(n,5)/5,C=2*Math.PI*43;return `<svg class="ring" viewBox="0 0 90 90"><circle cx="45" cy="45" r="43" fill="none" stroke="var(--line)" stroke-width="5"/><circle cx="45" cy="45" r="43" fill="none" stroke="var(--gold)" stroke-width="5" stroke-linecap="round" stroke-dasharray="${C*p} ${C}" transform="rotate(-90 45 45)"/></svg>`}
+function home(){
+ G=null;const u=UI[S.lang];
+ const nextIdx=UNITS.findIndex(x=>!(S.crowns[x.id]>0));
+ const offs=[0,28,48,28,0,-28,-48,-28];
+ let path="";
+ UNITS.forEach((x,i)=>{
+  const n=S.crowns[x.id]||0;
+  path+=`${i?'<div class="connector"></div>':''}<div class="unitrow" style="padding-left:calc(22% + ${offs[i%8]}px)">
+   <button class="node" data-u="${x.id}" style="background:${x.col};color:${x.col}" aria-label="${L(x.t)}">${ring(n,x.col)}${icon(x.icon)}${i===nextIdx?`<span class="next">${u.next}</span>`:""}</button>
+   <div class="unitlabel"><div class="t">${L(x.t)}</div><div class="s">${L(x.s)}</div><div class="crowns">${[0,1,2,3,4].map(k=>`<i class="${k<n?"on":""}"></i>`).join("")}</div></div>
+  </div>`;
+ });
+ const mc=S.miss.filter(id=>ALLQ[id]).length;
+ path+=`<div class="connector"></div><div class="unitrow" style="padding-left:22%"><button class="node" data-u="review" style="background:${mc?"#7c766a":"var(--line)"};color:#7c766a" aria-label="${u.review}">${icon("book")}</button><div class="unitlabel"><div class="t">${u.review}</div><div class="s">${mc?u.reviewSub(mc):u.reviewEmpty}</div></div></div>`;
+ app.innerHTML=header()+`<div class="hello">${mascot("happy")}<div class="bubble">${u.greet(streak())}</div></div><div class="path">${path}</div><div class="foot">${u.foot}<br><button class="ghost" id="rst">${u.reset}</button></div>`;
+ bindHeader();
+ app.querySelectorAll("[data-u]").forEach(b=>b.onclick=()=>b.dataset.u==="review"?notebook():start(b.dataset.u));
+ app.querySelector("#rst").onclick=confirmReset;
+ window.scrollTo(0,0);
+}
+function confirmReset(){
+ const u=UI[S.lang];const m=document.createElement("div");m.className="modal";
+ m.innerHTML=`<div class="box"><h3>${u.resetQ}</h3><p></p><button class="cta ng" id="y">${u.yes}</button><button class="ghost" id="n">${u.no}</button></div>`;
+ document.body.appendChild(m);m.querySelector("#n").onclick=()=>m.remove();
+ m.querySelector("#y").onclick=()=>{S.xp=0;S.crowns={};S.miss=[];S.missLog={};S.days=[];save();m.remove();home()};
+}
+/* prepare a question instance: shuffle options */
+function inst(q){
+ const c={...q};
+ if(q.t==="mc"||q.t==="multi"){
+  const idx=shuffle(q.opts.map((_,i)=>i));
+  c.opts=idx.map(i=>q.opts[i]);
+  c.a=q.t==="mc"?idx.indexOf(q.a):q.a.map(a=>idx.indexOf(a));
+ }
+ if(q.t==="fill"){c.bank=shuffle([...q.a,...q.d])}
+ if(q.t==="match"){c.R=shuffle(q.pairs.map((p,i)=>i));c.Lo=shuffle(q.pairs.map((p,i)=>i))}
+ return c;
+}
+function start(uid,ids){
+ let pool;
+ if(uid==="review"){pool=(ids||S.miss).map(id=>ALLQ[id]).filter(Boolean);if(!pool.length)return}
+ else pool=POOLS[uid];
+ const unit=UNITS.find(x=>x.id===uid);
+ const n=unit&&unit.boss?pool.length:Math.min(unit&&unit.n||10,pool.length);
+ // prefer variety of types
+ let qs=shuffle(pool);
+ const matches=qs.filter(q=>q.t==="match").slice(0,2), rest=qs.filter(q=>q.t!=="match");
+ qs=shuffle([...matches,...rest]).slice(0,n);
+ if(unit&&unit.boss)qs=pool.slice();
+ G={uid,queue:qs.map(inst),done:0,total:qs.length,hearts:HEARTS,errors:0,firstTry:0,seen:new Set(),t0:Date.now(),state:"ask",sel:null};
+ renderQ();
+}
+function qLabel(q){const u=UI[S.lang];return q.t==="multi"?u.selectAll:q.t==="match"?u.match:q.t==="fill"?u.fill:q.t==="tf"?u.tf:u.mc}
+function renderQ(){
+ if(!G)return home();
+ const u=UI[S.lang];const q=G.queue[0];
+ if(!q)return finish();
+ const pct=G.done/G.total*100;
+ let body="";
+ const prompt=q.t==="fill"?L(q.q)||u.fill:q.t==="match"?L(q.q)||u.match:L(q.q);
+ const img=q.img?`<div class="qimg">${renderImg(q.img)}</div>`:"";
+ if(q.t==="mc"){
+  const short=q.opts.every(o=>L(o).length<=14)&&!q.img;
+  body=`<div class="opts ${short?"two":""}">${q.opts.map((o,i)=>`<button class="opt" data-i="${i}" aria-pressed="${G.sel===i}"><span class="k">${i+1}</span><span>${L(o)}</span></button>`).join("")}</div>`;
+ }else if(q.t==="multi"){
+  const sel=G.sel||[];
+  body=`<div class="hint">${u.selectAll}</div><div class="opts">${q.opts.map((o,i)=>`<button class="opt" data-i="${i}" aria-pressed="${sel.includes(i)}"><span class="k">${sel.includes(i)?"✓":i+1}</span><span>${L(o)}</span></button>`).join("")}</div>`;
+ }else if(q.t==="tf"){
+  body=`<div class="opts two"><button class="opt big" data-i="1" aria-pressed="${G.sel===1}">○ ${u.T}</button><button class="opt big" data-i="0" aria-pressed="${G.sel===0}">× ${u.F}</button></div>`;
+ }else if(q.t==="fill"){
+  const f=G.sel||[];let k=0;
+  const parts=q.s.split("___");
+  const sent=parts.map((p,i)=>i<parts.length-1?`${p}<span class="blank">${f[i]!=null?`<button data-b="${i}">${q.bank[f[i]]}</button>`:"&nbsp;"}</span>`:p).join("");
+  body=`<div class="sentence">${sent}</div><div class="bank">${q.bank.map((w,i)=>`<button class="chip" data-c="${i}" ${f.includes(i)?"disabled":""}>${w}</button>`).join("")}</div>`;
+ }else if(q.t==="match"){
+  const m=G.sel||{l:null,done:[],bad:null};
+  body=`<div class="match"><div class="col">${q.Lo.map(i=>`<button class="opt ${m.done.includes(i)?"gone":""}" data-l="${i}" ${m.done.includes(i)?"disabled":""} aria-pressed="${m.l===i}">${L(q.pairs[i][0])}</button>`).join("")}</div><div class="col">${q.R.map(i=>`<button class="opt ${m.done.includes(i)?"gone":""} ${m.bad===i?"flash":""}" data-r="${i}" ${m.done.includes(i)?"disabled":""}>${L(q.pairs[i][1])}</button>`).join("")}</div></div>`;
+ }
+ const showMascot=!q.img&&(q.t==="mc"||q.t==="tf");
+ app.innerHTML=`<div class="lesson">
+  <div class="lhead"><button class="close" id="quit" aria-label="close">${svgI.x}</button><div class="pbar"><i style="width:${pct}%"></i></div><div class="stat">${svgI.heart}<span>${G.hearts}</span></div></div>
+  <div class="qwrap">
+   <div class="qtype">${q.t==="multi"?"MULTI":q.t==="match"?"MATCH":q.t==="fill"?"FILL":q.t==="tf"?"○ ×":"QUIZ"} · ${G.done+1}/${G.total}</div>
+   ${showMascot?`<div class="qrow">${mascot("neutral")}<div class="qtext">${prompt}</div></div>`:`<div class="qtext">${prompt}</div>`}
+   ${img}${body}
+  </div>
+  ${sheet(q)}
+ </div>`;
+ bindQ(q);
+}
+function ready(q){
+ if(q.t==="mc"||q.t==="tf")return G.sel!=null;
+ if(q.t==="multi")return (G.sel||[]).length>0;
+ if(q.t==="fill")return (G.sel||[]).filter(x=>x!=null).length===q.a.length;
+ return false;
+}
+function sheet(q){
+ const u=UI[S.lang];
+ if(G.state==="ask"){
+  if(q.t==="match")return "";
+  return `<div class="sheet"><div class="in"><button class="cta" id="chk" ${ready(q)?"":"disabled"}>${u.check}</button></div></div>`;
+ }
+ const ok=G.state==="ok";
+ const ex=q.ex?`<div class="exp">${L(q.ex)}</div>`:"";
+ const ansTxt=ok?"":`<div class="exp"><b>${u.ans}</b>${answerText(q)}</div>`;
+ const head=ok?(q.t==="match"&&!G.matchErr?u.skipMatch:u.ok[Math.floor(Math.random()*u.ok.length)]):u.ng;
+ return `<div class="sheet ${ok?"ok":"ng"}"><div class="in"><div class="verdict">${ok?svgI.okc:svgI.ngc}<span>${head}</span></div>${ansTxt}${ex}${ok?"":`<div class="exp">${u.ngSub}</div>`}<button class="cta ${ok?"":"ng"}" id="cont">${u.cont}</button></div></div>`;
+}
+function answerText(q){
+ if(q.t==="mc")return L(q.opts[q.a]);
+ if(q.t==="multi")return q.a.map(i=>L(q.opts[i])).join(" ／ ");
+ if(q.t==="tf")return q.a?UI[S.lang].T:UI[S.lang].F;
+ if(q.t==="fill")return q.a.join("・");
+ if(q.t==="match")return q.pairs.map(p=>`${L(p[0])}＝${L(p[1])}`).join("、");
+ return "";
+}
+function bindQ(q){
+ const qt=app.querySelector("#quit");qt.onclick=confirmQuit;
+ if(G.state!=="ask"){app.querySelector("#cont").onclick=next;app.querySelector("#cont").focus();return}
+ if(q.t==="mc"||q.t==="tf")app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{G.sel=+b.dataset.i;renderQ()});
+ if(q.t==="multi")app.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{const i=+b.dataset.i;G.sel=G.sel||[];G.sel=G.sel.includes(i)?G.sel.filter(x=>x!==i):[...G.sel,i];renderQ()});
+ if(q.t==="fill"){
+  app.querySelectorAll("[data-c]").forEach(b=>b.onclick=()=>{G.sel=G.sel||[];let slot=-1;for(let i=0;i<q.a.length;i++){if(G.sel[i]==null){slot=i;break}}if(slot<0)return;G.sel[slot]=+b.dataset.c;renderQ()});
+  app.querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>{G.sel[+b.dataset.b]=null;renderQ()});
+ }
+ if(q.t==="match"){
+  G.sel=G.sel||{l:null,done:[],bad:null};
+  app.querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>{G.sel.l=+b.dataset.l;G.sel.bad=null;renderQ()});
+  app.querySelectorAll("[data-r]").forEach(b=>b.onclick=()=>{
+   const r=+b.dataset.r;if(G.sel.l==null)return;
+   if(r===G.sel.l){G.sel.done.push(r);G.sel.l=null;G.sel.bad=null;beepSoft();if(G.sel.done.length===q.pairs.length){G.state="ok";G.done++;if(!G.seen.has(q.id)&&!G.matchErr)G.firstTry++;G.seen.add(q.id);if(G.matchErr)addMiss(q.id);else removeMiss(q.id);beep(true)}}
+   else{G.sel.bad=r;G.matchErr=true}
+   renderQ();
+  });
+ }
+ const c=app.querySelector("#chk");if(c)c.onclick=check;
+}
+function beepSoft(){if(!S.sound)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;o.frequency.value=740;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.08,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.12);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+.13)}catch(e){}}
+function addMiss(id){if(!S.miss.includes(id))S.miss.push(id);const r=S.missLog[id]||{n:0};r.n++;r.last=today();delete r.fixed;S.missLog[id]=r;save()}
+function removeMiss(id){S.miss=S.miss.filter(x=>x!==id);if(S.missLog[id])S.missLog[id].fixed=today();save()}
+function check(){
+ const q=G.queue[0];if(!ready(q))return;
+ let ok=false;
+ if(q.t==="mc")ok=G.sel===q.a;
+ if(q.t==="tf")ok=(G.sel===1)===q.a;
+ if(q.t==="multi"){const s=[...G.sel].sort().join(),a=[...q.a].sort().join();ok=s===a}
+ if(q.t==="fill")ok=G.sel.every((b,i)=>q.bank[b]===q.a[i]);
+ G.state=ok?"ok":"ng";beep(ok);
+ if(ok){G.done++;if(!G.seen.has(q.id))G.firstTry++;removeMiss(q.id)}
+ else{G.hearts--;G.errors++;addMiss(q.id)}
+ G.seen.add(q.id);
+ renderQ();
+}
+function next(){
+ const q=G.queue.shift();
+ if(G.state==="ng"){G.queue.push(inst(ALLQ[q.id]||q))}
+ G.state="ask";G.sel=null;G.matchErr=false;
+ if(G.hearts<=0)return outOfHearts();
+ renderQ();
+}
+function finish(){
+ const u=UI[S.lang];const uid=G.uid;
+ const perfect=G.errors===0;const gain=10+(perfect?5:0)+(uid==="bs"?10:0);
+ S.xp+=gain;if(uid!=="review")S.crowns[uid]=(S.crowns[uid]||0)+1;
+ if(!S.days.includes(today()))S.days.push(today());save();
+ const acc=Math.round(G.firstTry/G.total*100);const sec=Math.round((Date.now()-G.t0)/1000);
+ const time=`${Math.floor(sec/60)}:${String(sec%60).padStart(2,"0")}`;
+ G=null;
+ app.innerHTML=`<div class="end">${mascot("happy")}<h2>${perfect?u.perfect:u.done}</h2><p>${L(UNITS.find(x=>x.id===uid)?.t)||u.review}</p>
+  <div class="tiles"><div class="tile" style="border-color:var(--gold)"><div class="h" style="background:var(--gold)">${u.xp}</div><div class="v">+${gain}</div></div><div class="tile" style="border-color:var(--green)"><div class="h" style="background:var(--green)">${u.acc}</div><div class="v">${acc}%</div></div><div class="tile" style="border-color:var(--blue)"><div class="h" style="background:var(--blue)">${u.time}</div><div class="v">${time}</div></div></div>
+  <div class="endbtns"><button class="cta" id="h">${u.home}</button><button class="ghost" id="a">${u.again}</button></div></div>`;
+ app.querySelector("#h").onclick=home;app.querySelector("#a").onclick=()=>start(uid);
+}
+function outOfHearts(){
+ const u=UI[S.lang];const uid=G.uid;G=null;
+ app.innerHTML=`<div class="end">${mascot("sad")}<h2 style="color:var(--red)">${u.out}</h2><p>${u.outSub}</p><div class="endbtns"><button class="cta" id="a">${u.again}</button><button class="ghost" id="r">${u.review}</button><button class="ghost" id="h">${u.home}</button></div></div>`;
+ app.querySelector("#a").onclick=()=>start(uid);app.querySelector("#r").onclick=()=>start("review");app.querySelector("#h").onclick=home;
+}
+function confirmQuit(){
+ const u=UI[S.lang];const m=document.createElement("div");m.className="modal";
+ m.innerHTML=`<div class="box">${mascot("sad").replace('class="mascot"','class="mascot" width="90" height="90" style="align-self:center"')}<h3>${u.quit}</h3><p>${u.quitSub}</p><button class="cta" id="k">${u.keep}</button><button class="ghost" id="l" style="color:var(--red)">${u.leave}</button></div>`;
+ document.body.appendChild(m);m.querySelector("#k").onclick=()=>m.remove();m.querySelector("#l").onclick=()=>{m.remove();home()};
+}
+document.addEventListener("keydown",e=>{
+ if(!G)return;const q=G.queue[0];if(!q)return;
+ if(e.key==="Enter"){e.preventDefault();if(G.state==="ask"){if(ready(q))check()}else next();return}
+ if(G.state==="ask"&&/^[1-5]$/.test(e.key)){const i=+e.key-1;
+  if(q.t==="mc"&&i<q.opts.length){G.sel=i;renderQ()}
+  if(q.t==="multi"&&i<q.opts.length){G.sel=G.sel||[];G.sel=G.sel.includes(i)?G.sel.filter(x=>x!==i):[...G.sel,i];renderQ()}
+  if(q.t==="tf"&&i<2){G.sel=i===0?1:0;renderQ()}
+ }
+});
+/* ============ notebook ============ */
+const UNIT_OF={};UNITS.forEach(u=>POOLS[u.id].forEach(q=>UNIT_OF[q.id]=UNIT_OF[q.id]||u.id));
+S.miss.forEach(id=>{if(!S.missLog[id])S.missLog[id]={n:1,last:today()}});
+const NB={tab:0,unit:"all"};
+function nbQuestion(q){
+ if(q.t==="fill"){let k=0;return q.s.replace(/___/g,()=>`<span style="color:var(--green)">［${q.a[k++]}］</span>`)}
+ if(q.t==="match")return L(q.q)||UI[S.lang].match;
+ return L(q.q);
+}
+function notebook(){
+ G=null;const u=UI[S.lang];
+ const ids=Object.keys(S.missLog).filter(id=>ALLQ[id]);
+ const act=new Set(S.miss);
+ const inU=id=>NB.unit==="all"||UNIT_OF[id]===NB.unit;
+ const nAct=ids.filter(id=>act.has(id)).length,nFix=ids.length-nAct;
+ const list=ids.filter(inU).filter(id=>NB.tab===2||(NB.tab===0?act.has(id):!act.has(id)))
+  .sort((a,b)=>(S.missLog[b].n-S.missLog[a].n)||String(S.missLog[b].last).localeCompare(String(S.missLog[a].last)));
+ const rev=ids.filter(inU).filter(id=>act.has(id));
+ const units=UNITS.filter(x=>ids.some(id=>UNIT_OF[id]===x.id));
+ const chips=`<div class="uchips"><button data-f="all" aria-pressed="${NB.unit==="all"}">${u.nbAll}</button>${units.map(x=>`<button data-f="${x.id}" aria-pressed="${NB.unit===x.id}">${L(x.t)}（${ids.filter(id=>UNIT_OF[id]===x.id&&act.has(id)).length}）</button>`).join("")}</div>`;
+ const cards=list.map(id=>{const q=ALLQ[id],r=S.missLog[id],un=UNITS.find(x=>x.id===UNIT_OF[id]);const fixed=!act.has(id);
+  return `<div class="nbcard ${fixed?"fixed":""}"><div class="nbmeta">${un?`<span class="upill" style="background:${un.col}">${L(un.t)}</span>`:""}<span class="cnt">${u.nbTimes(r.n)}</span><span>${u.nbLast} ${r.last||""}</span>${fixed?`<span class="okb">✓ ${u.nbFixed}${r.fixed?" "+r.fixed:""}</span>`:""}</div>
+   <div class="nbq">${nbQuestion(q)}</div>${q.img?`<div class="nbimg">${renderImg(q.img)}</div>`:""}
+   ${q.t==="fill"?"":`<div class="nba"><b>${u.ans}</b>${answerText(q)}</div>`}${q.ex?`<div class="nbex">${L(q.ex)}</div>`:""}
+   <button class="ghost" data-del="${id}">${u.nbRemove}</button></div>`}).join("");
+ app.innerHTML=`<div class="nbhead"><button class="close" id="back" aria-label="${u.nbBack}">${svgI.x}</button><h2>${u.review}</h2></div>
+  <div class="nbsum">${u.nbSum(nAct,nFix)}</div>
+  ${rev.length?`<button class="cta" id="go">${u.nbStart(Math.min(rev.length,10))}</button>`:""}
+  <div class="tabs" style="margin-top:14px">${u.nbTabs.map((t,i)=>`<button data-t="${i}" aria-pressed="${NB.tab===i}">${t}</button>`).join("")}</div>
+  ${units.length?chips:""}
+  <div class="nblist">${cards||`<div class="nbempty">${mascot("happy")}<div>${ids.length?u.nbNone:u.nbEmpty}</div></div>`}</div>`;
+ app.querySelector("#back").onclick=home;
+ const go=app.querySelector("#go");if(go)go.onclick=()=>start("review",rev);
+ app.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{NB.tab=+b.dataset.t;notebook()});
+ app.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{NB.unit=b.dataset.f;notebook()});
+ app.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const id=b.dataset.del;delete S.missLog[id];S.miss=S.miss.filter(x=>x!==id);save();notebook()});
+ window.scrollTo(0,0);
+}
+document.documentElement.lang=S.lang==="ja"?"ja":"zh-Hant";
+home();
+</script>
